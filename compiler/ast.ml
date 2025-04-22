@@ -33,6 +33,7 @@ and
   ast_expr = 
   | Var of string
   | Num of int
+  | Bool of bool
   | If of ast_expr * ast_expr * ast_expr
   | Let of string * Types.t * ast_expr * ast_expr * bool ref
   | BinOp of ast_expr * ast_binop * ast_expr

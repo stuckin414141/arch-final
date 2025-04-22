@@ -46,6 +46,8 @@ let token_to_string (t : Grammar.token) : string =
     | Grammar.INT -> "INT"
     | Grammar.LONG -> "LONG"
     | Grammar.BOOL -> "BOOL"
+    | Grammar.TRUE -> "TRUE"
+    | Grammar.FALSE -> "FALSE"
 
 let string_of_binop : Ast.ast_binop -> string = function 
     | Ast.Plus ->  "+"
@@ -73,7 +75,15 @@ let rec string_of_type : Types.t -> string = function
     | Types.Short -> "short"
     | Types.Long -> "long"
     | Types.Ftmlk all ->
-        List.fold_left (fun cur typ -> cur ^ string_of_type typ ^ "->") "" all
+        let rec parse_fun = (fun h -> 
+            match h with
+            | [] -> ""
+            | [t] -> string_of_type t
+            | h :: t ->
+                string_of_type h ^ "->" ^ (parse_fun t))
+            in
+            parse_fun all
+          
 let indent n = 
     for _ = 0 to n - 1 do
         print_char ' '
@@ -195,3 +205,6 @@ and print_ast_expr depth = function
             indent (depth + 4);
             print_ast_expr (depth + 4) arg
         ) args
+    | Ast.Bool b ->
+        indent depth;
+        print_endline ("Bool " ^ string_of_bool b)

@@ -1,3 +1,2 @@
-add true/false introduction forms
-I don't want ifUnit to require braces
+add closures + broader translation to IR
 optimally while/if blocks shouldn't have to be punctuated with semicolons

@@ -63,6 +63,7 @@ and
         List.fold_left (fun venv arg -> analysis_expr venv depth arg) venv args 
       in
       analysis_expr venv_after_args depth func
+    | Ast.Bool _ -> venv
 
 let analyze ast = 
   analysis_stmt Symbols.SymbolTable.empty 0 ast

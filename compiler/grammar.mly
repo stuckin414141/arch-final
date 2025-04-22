@@ -10,6 +10,7 @@
 %token AND OR ASSIGN
 %token IF THEN ELSE WHILE LET IN
 %token BREAK
+%token TRUE FALSE
 %token FTMLK
 %token CHAR SHORT INT LONG BOOL
 %token MODULO
@@ -19,10 +20,9 @@
 %start program
 %type<Ast.ast_stmt> program
 
-%nonassoc THEN
-%nonassoc ELSE
-
 %left SEMICOLON
+%nonassoc ELSE
+%nonassoc THEN
 %left ASSIGN
 %nonassoc IN
 %left OR
@@ -49,11 +49,13 @@ stmt:
     | stmt SEMICOLON stmt {Seq($1, $3)}
     | WHILE expr LBRACE stmt RBRACE {While($2, $4)}
     | ID ASSIGN expr {Assign($1, $3)}
-    | IF expr THEN LBRACE stmt RBRACE { IfUnit($2, $5) }
+    | IF expr THEN stmt { IfUnit($2, $4) }
     | BREAK { Break }
 expr:
     | LPAREN expr RPAREN { $2 }
     | ID { Var($1) }
+    | TRUE { Bool(true) }
+    | FALSE { Bool(false) }
     | expr LPAREN exprlist RPAREN { FtmlkApp($1, $3) }
     | NUM { Num($1) }
     | LET ID COLON type_parse ASSIGN expr IN expr { Let($2, $4, $6, $8, ref false) }

@@ -27,6 +27,8 @@ rule token = parse
 | "short" {SHORT}
 | "print" {PRINT}
 | "while" {WHILE}
+| "true" {TRUE}
+| "false" {FALSE}
 | "if" {IF}
 | "then" {THEN}
 | "break" {BREAK}
