@@ -1,0 +1,16 @@
+
+(menhir
+(modules grammar)
+(infer true)
+)
+
+(rule
+(target lexer.ml)
+(deps lexer.mll)
+(action (chdir %{workspace_root}
+(run %{bin:ocamllex} -q -o %{target} %{deps}))))
+
+(library
+(name compiler)
+(libraries regular graphlib)
+)
