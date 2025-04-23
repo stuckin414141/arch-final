@@ -1,2 +1,3 @@
-add closures + broader translation to IR
+remove short/char/long types from grammar + lexer
+add stack frames/variable location processing
 optimally while/if blocks shouldn't have to be punctuated with semicolons

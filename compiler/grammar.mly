@@ -12,13 +12,13 @@
 %token BREAK
 %token TRUE FALSE
 %token FTMLK
-%token CHAR SHORT INT LONG BOOL
+%token INT BOOL
 %token MODULO
 %token PRINT
 %token ARROW
 
 %start program
-%type<Ast.ast_stmt> program
+%type<Ast.stmt> program
 
 %left SEMICOLON
 %nonassoc ELSE
@@ -94,8 +94,5 @@ exprlist:
 type_parse:
     | LPAREN type_parse RPAREN { $2} 
     | BOOL { Types.Bool }
-    | CHAR { Types.Char }
-    | SHORT { Types.Short }
     | INT { Types.Int }
-    | LONG { Types.Long }
-    | type_parse ARROW type_parse { Types.Ftmlk [$1; $3]}
+    | type_parse ARROW type_parse { Types.Ftmlk ($1, $3)}

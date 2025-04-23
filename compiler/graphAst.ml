@@ -1,8 +1,8 @@
 
 module AstNode = struct
   type t = Var of string 
-  | AstStmt of Ast.ast_stmt
-  | AstExpr of Ast.ast_expr
+  | AstStmt of Ast.stmt
+  | AstExpr of Ast.expr
   | AstType of Types.t
   | AstBinOp of Ast.ast_binop
   let compare _ _ = 0

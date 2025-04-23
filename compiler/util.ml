@@ -41,10 +41,7 @@ let token_to_string (t : Grammar.token) : string =
     | Grammar.FTMLK -> "FTMLK"
     | Grammar.PRINT -> "PRINT"
     | Grammar.ARROW -> "ARROW"
-    | Grammar.CHAR -> "CHAR"
-    | Grammar.SHORT -> "SHORT"
     | Grammar.INT -> "INT"
-    | Grammar.LONG -> "LONG"
     | Grammar.BOOL -> "BOOL"
     | Grammar.TRUE -> "TRUE"
     | Grammar.FALSE -> "FALSE"
@@ -71,19 +68,8 @@ let string_of_binop : Ast.ast_binop -> string = function
 let rec string_of_type : Types.t -> string = function
     | Types.Int -> "int"
     | Types.Bool -> "bool"
-    | Types.Char -> "char"
-    | Types.Short -> "short"
-    | Types.Long -> "long"
-    | Types.Ftmlk all ->
-        let rec parse_fun = (fun h -> 
-            match h with
-            | [] -> ""
-            | [t] -> string_of_type t
-            | h :: t ->
-                string_of_type h ^ "->" ^ (parse_fun t))
-            in
-            parse_fun all
-          
+    | Types.Ftmlk (t1, t2) ->
+            (string_of_type t1) ^ "->(" ^ (string_of_type t2) ^ ")"
 let indent n = 
     for _ = 0 to n - 1 do
         print_char ' '
