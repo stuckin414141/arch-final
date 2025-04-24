@@ -19,8 +19,8 @@ print(add3(10));  // 13
 // Complex composition
 let composeMany: (int -> int) -> int -> (int -> int) = 
   ftmlk(f: int -> int, n: int) {
-    let result: int -> int := ftmlk(x: int) { x } in
-    let i: int := 0 in
+    let result: int -> int = ftmlk(x: int) { x } in
+    let i: int = 0 in
       while i < n {
         result := ftmlk(x: int) { f(result(x)) };
         i := i + 1

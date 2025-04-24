@@ -29,13 +29,20 @@ let rec typecheck_stmt ast (types : types) =
       failwith "Print expression must not return unit"
     else
       (types, Types.Unit)
-  | Ast.LetStmt (var_name, var_type, init_expr, _) ->
-    let (_, init_type) = typecheck_expr init_expr types in
-    if init_type <> var_type then
-      failwith "Type of initialization statement does not match variable type"
-    else
-      let updated_types = Symbols.SymbolTable.add var_name var_type types in
-      (updated_types, Types.Unit)
+  | Ast.LetStmt (var_name, var_type, init_expr, _, is_recursive) ->
+    let updated_types = Symbols.SymbolTable.add var_name var_type types in
+    let init_type = 
+        if is_recursive then
+          let (_, init_type) = typecheck_expr init_expr updated_types in
+          init_type
+        else
+          let (_, init_type) = typecheck_expr init_expr types in
+          init_type
+      in
+      if init_type <> var_type then
+        failwith "Type of initialization statement does not match variable type"
+      else
+        (updated_types, Types.Unit)
   | Ast.Assign (var_name, expr) ->
     (match lookup var_name types with
     | Some typ ->
@@ -79,14 +86,21 @@ and typecheck_expr ast types =
         failwith "Then and else branches of if expression must have the same type"
       else
         (types, then_type)
-  | Ast.Let (var_name, var_type, init_expr, body_expr, _) ->
-    let (_, init_type) = typecheck_expr init_expr types in
-    if init_type <> var_type then
-      failwith "Type of initialization expression does not match variable type"
-    else
+  | Ast.Let (var_name, var_type, init_expr, body_expr, _, is_recursive) ->
       let updated_types = Symbols.SymbolTable.add var_name var_type types in
-      let (_, body_type) = typecheck_expr body_expr updated_types in
-      (types, body_type)
+      let init_type = 
+        if is_recursive then
+          let (_, init_type) = typecheck_expr init_expr updated_types in
+          init_type
+        else
+          let (_, init_type) = typecheck_expr init_expr types in
+          init_type
+      in
+      if init_type <> var_type then
+        failwith "Type of initialization statement does not match variable type"
+      else
+        let (_, body_type) = typecheck_expr body_expr updated_types in
+        (types, body_type)
   | Ast.BinOp (left, op, right) ->
     let (_, left_type) = typecheck_expr left types in
     let (_, right_type) = typecheck_expr right types in

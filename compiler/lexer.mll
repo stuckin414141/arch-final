@@ -33,6 +33,7 @@ rule token = parse
 | "ftmlk" {FTMLK}
 | "else" {ELSE}
 | "let" {LET}
+| "rec" {REC}
 | "in" {IN}
 | ":=" {ASSIGN}
 | "!=" {NEQ}

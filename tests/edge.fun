@@ -1,10 +1,10 @@
 // Test empty function body
-let identity: int -> int := ftmlk(x: int) { x };
+let identity: int -> int = ftmlk(x: int) { x };
 
 // Test function with multiple parameters
-let complex: int -> int -> int := ftmlk(x: int, y: int) {
-  let z: int := x + y;
-  z * 2
+let complex: int -> int -> int = ftmlk(x: int, y: int) {
+  let z: int = x + y in
+    z * 2
 };
 print(complex(3, 4));
 

@@ -4,14 +4,14 @@ if 5 > 3 {
 };
 
 // Test if-then-else
-let z : int := 
+let z : int = 
     if 5 > 10 then 
         10
     else 
         20;
 
 // Test nested if expressions
-let x: int := 
+let x: int = 
     if 5 > 3 then 
         if 2 < 1 then 
             100 
@@ -22,14 +22,14 @@ let x: int :=
 print(x);
 
 // Test while loops
-let count: int := 0;
+let count: int = 0;
 while count < 5 {
   print(count);
   count := count + 1
 };
 
 // Test break
-let i: int := 0;
+let i: int = 0;
 while i < 10 {
   if i > 5 { break };
   print(i);

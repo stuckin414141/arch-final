@@ -46,6 +46,7 @@ let token_to_string (t : Grammar.token) : string =
     | Grammar.BOOL -> "BOOL"
     | Grammar.TRUE -> "TRUE"
     | Grammar.FALSE -> "FALSE"
+    | Grammar.REC -> "REC"
 
 let string_of_binop : Ast.ast_binop -> string = function 
     | Ast.Plus ->  "+"
@@ -87,7 +88,7 @@ let rec print_ast_stmt depth = function
         print_endline "Seq";
         print_ast_stmt (depth + 2) first;
         print_ast_stmt (depth + 2) rest
-    | Ast.LetStmt (name, typ, expr, ref) ->
+    | Ast.LetStmt (name, typ, expr, ref, is_recursive) ->
         indent depth;
         print_endline ("LetStmt " ^ name);
         indent (depth + 2);
@@ -96,7 +97,9 @@ let rec print_ast_stmt depth = function
         print_endline "Expr";
         print_ast_expr (depth + 4) expr;
         indent (depth + 2);
-        print_endline ("Ref: " ^ string_of_bool !ref)
+        print_endline ("Ref: " ^ string_of_bool !ref);
+    indent (depth + 2);
+        print_endline ("Is recursive: " ^ string_of_bool is_recursive)
     | Ast.Print expr ->
         indent depth;
         print_endline "Print";
@@ -138,7 +141,7 @@ and print_ast_expr depth = function
         indent (depth + 2);
         print_endline "Else";
         print_ast_expr (depth + 4) else_branch
-    | Ast.Let (name, _, expr, body, ref) ->
+    | Ast.Let (name, _, expr, body, ref, is_recursive) ->
         indent depth;
         print_endline ("Let " ^ name);
         indent (depth + 2);
@@ -148,7 +151,9 @@ and print_ast_expr depth = function
         print_endline "Body";
         print_ast_expr (depth + 4) body;
         indent (depth + 2);
-        print_endline ("Ref: " ^ string_of_bool !ref)
+        print_endline ("Ref: " ^ string_of_bool !ref);
+      indent (depth + 2);
+      print_endline ("Recursive: " ^ string_of_bool is_recursive)
     | Ast.BinOp (left, op, right) ->
         indent depth;
         print_endline ("BinOp " ^ string_of_binop op);

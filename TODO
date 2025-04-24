@@ -1,10 +1,10 @@
-add recursion
-maybe add type inference
 ensure that you are okay with the scoping policies of the typechecker/syntax
+add recursion
 re-write the IR to a form of MIR
 - yes registers + labels, but also instructions
 - produced code will be a block/sequence of instructions
 - we will have if and jump statements as necessary
 Modify the lowering code to support STLC
+maybe add type inference
 add arrays/pointers???????
 add/enable recursion

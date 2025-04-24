@@ -13,7 +13,7 @@ let rec analysis_stmt (venv : escape_table) depth = function
   | Ast.Seq (first, rest) ->
       let venv_after_first = analysis_stmt venv depth first in
       analysis_stmt venv_after_first depth rest
-  | Ast.LetStmt (name, _, expr, ref) ->
+  | Ast.LetStmt (name, _, expr, ref, _) ->
       let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
       analysis_expr venv_with_decl depth expr
   | Ast.Print expr ->
@@ -44,7 +44,7 @@ and
         let updated_venv = analysis_expr venv depth cond in
         let updated_venv_then = analysis_expr updated_venv depth then_branch in
         analysis_expr updated_venv_then depth else_branch
-    | Ast.Let (name, _, expr, body, ref) ->
+    | Ast.Let (name, _, expr, body, ref, _) ->
         let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
         let updated_venv = analysis_expr venv_with_decl depth expr in
         analysis_expr updated_venv depth body

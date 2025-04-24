@@ -10,6 +10,7 @@
 %token AND OR ASSIGN
 %token IF THEN ELSE WHILE LET IN
 %token BREAK
+%token REC
 %token TRUE FALSE
 %token FTMLK
 %token INT BOOL UNIT
@@ -45,8 +46,8 @@ program:
 
 stmt:
     | PRINT LPAREN expr RPAREN { Print($3)}
-    | LET ID COLON type_parse ASSIGN expr { LetStmt ($2, $4, $6, ref false)}
-    | LET ID COLON type_parse EQ expr { LetStmt ($2, $4, $6, ref false)}
+    | LET ID COLON type_parse EQ expr { LetStmt ($2, $4, $6, ref false, false)}
+    | LET REC ID COLON type_parse EQ expr { LetStmt ($3, $5, $7, ref false, true)}
     | stmt SEMICOLON stmt {Seq($1, $3)}
     | WHILE expr LBRACE stmt RBRACE {While($2, $4)}
     | ID ASSIGN expr {Assign($1, $3)}
@@ -59,7 +60,8 @@ expr:
     | FALSE { Bool(false) }
     | expr LPAREN exprlist RPAREN { FtmlkApp($1, $3) }
     | NUM { Num($1) }
-    | LET ID COLON type_parse ASSIGN expr IN expr { Let($2, $4, $6, $8, ref false) }
+    | LET ID COLON type_parse EQ expr IN expr { Let($2, $4, $6, $8, ref false, false) }
+    | LET REC ID COLON type_parse EQ expr IN expr { Let($3, $5, $7, $9, ref false, true) }
     | IF expr THEN expr ELSE expr { If($2, $4, $6) }
     |  expr PLUS expr { BinOp($1, Plus, $3) }
     |  expr MINUS expr { BinOp($1, Minus, $3) }

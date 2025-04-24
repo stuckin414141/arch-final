@@ -114,7 +114,7 @@ module LowerAst (Arch : ArchFrame) = struct
             | Func _ -> failwith "not a variable")
             in
             (access_var var_access, env)
-        | Let (var_name, _, init_expr, body_expr, is_closure) ->
+        | Let (var_name, _, init_expr, body_expr, is_closure, _) ->
             if !is_closure then
                 let ({parent; func; closure_size}, values) = env in
                 let offset = closure_size in

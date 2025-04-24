@@ -23,7 +23,7 @@ type ast_binop =
 
 type stmt = 
   | While of expr * stmt
-  | LetStmt of string * Types.t * expr * bool ref
+  | LetStmt of string * Types.t * expr * bool ref * bool
   | Print of expr
   | Assign of string * expr
   | IfUnit of expr * stmt
@@ -35,7 +35,7 @@ and
   | Num of int
   | Bool of bool
   | If of expr * expr * expr
-  | Let of string * Types.t * expr * expr * bool ref
+  | Let of string * Types.t * expr * expr * bool ref * bool
   | BinOp of expr * ast_binop * expr
   | ESeq of stmt * expr
   | Ftmlk of (string * Types.t * bool ref) list * expr
