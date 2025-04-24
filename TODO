@@ -1,3 +1,10 @@
-remove short/char/long types from grammar + lexer
-add stack frames/variable location processing
-optimally while/if blocks shouldn't have to be punctuated with semicolons
+add recursion
+maybe add type inference
+ensure that you are okay with the scoping policies of the typechecker/syntax
+re-write the IR to a form of MIR
+- yes registers + labels, but also instructions
+- produced code will be a block/sequence of instructions
+- we will have if and jump statements as necessary
+Modify the lowering code to support STLC
+add arrays/pointers???????
+add/enable recursion

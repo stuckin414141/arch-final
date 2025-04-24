@@ -1,11 +1,16 @@
 type stmt = 
-  | Load of expr * expr
+  | Move of Regs.t * expr
   | Store of expr * expr
   | Call of expr * expr list
   | Branch of expr * expr
-  | Label of Lower.Labels.t
+  | Jump of Labels.t
+  | Label of Labels.t
+  | Seq of stmt * stmt
 and expr = 
   | Binop of expr * Ast.ast_binop * expr
-  | Imm of int
-  | Address of Lower.Labels.t
-  | Reg of Lower.Regs.t
+  | Const of int
+  | Address of Labels.t
+  | Reg of Regs.t
+  (*Produces the value located at the memory address specified at expr*)
+  | Deref of expr
+  | ESeq of stmt * expr

@@ -21,11 +21,13 @@ print(t == f);  // false
 print(t != f);  // true
 
 // Test boolean expressions in if statements
-if t then 
-    print(1);
+if t { 
+    print(1)
+};
 
-if f then 
-    print(0);
+if f then {
+    print(0)
+};
 
 // Test complex boolean expressions
 let complex1 : bool := (t && f) || (t && t);

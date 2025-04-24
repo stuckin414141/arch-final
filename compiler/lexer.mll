@@ -22,6 +22,7 @@ rule token = parse
 | "//" {comment lexbuf}
 | "int" {INT}
 | "bool" {BOOL}
+| "unit" {UNIT}
 | "print" {PRINT}
 | "while" {WHILE}
 | "true" {TRUE}

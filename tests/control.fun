@@ -1,6 +1,7 @@
 // Test if-then
-if 5 > 3 then 
-    print(1);
+if 5 > 3 { 
+    print(1)
+};
 
 // Test if-then-else
 let z : int := 
@@ -30,7 +31,7 @@ while count < 5 {
 // Test break
 let i: int := 0;
 while i < 10 {
-  if i > 5 then break;
+  if i > 5 { break };
   print(i);
   i := i + 1
 }

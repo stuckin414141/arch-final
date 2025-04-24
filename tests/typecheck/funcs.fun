@@ -1,0 +1,10 @@
+let add: int -> int -> int = ftmlk(x: int, y: int) { x + y };
+let mul: int -> int -> int = ftmlk(x: int, y: int) { x * y };
+let apply: (int -> int) -> int -> int = ftmlk(f: int -> int, x: int) { f(x) };
+let twice: (int -> int) -> int -> int = ftmlk(f: int -> int, x: int) { f(f(x)) };
+let inc: int -> int = ftmlk(x: int) { x + 1 };
+
+print(add(5, 3));
+print(mul(4, 2));
+print(apply(inc, 10));
+print(twice(inc, 7))

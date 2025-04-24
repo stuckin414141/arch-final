@@ -41,6 +41,7 @@ let token_to_string (t : Grammar.token) : string =
     | Grammar.FTMLK -> "FTMLK"
     | Grammar.PRINT -> "PRINT"
     | Grammar.ARROW -> "ARROW"
+    | Grammar.UNIT -> "UNIT"
     | Grammar.INT -> "INT"
     | Grammar.BOOL -> "BOOL"
     | Grammar.TRUE -> "TRUE"
@@ -69,7 +70,8 @@ let rec string_of_type : Types.t -> string = function
     | Types.Int -> "int"
     | Types.Bool -> "bool"
     | Types.Ftmlk (t1, t2) ->
-            (string_of_type t1) ^ "->(" ^ (string_of_type t2) ^ ")"
+            "(" ^ (string_of_type t1) ^ ")->(" ^ (string_of_type t2) ^ ")"
+    | Types.Unit -> "unit"
 let indent n = 
     for _ = 0 to n - 1 do
         print_char ' '

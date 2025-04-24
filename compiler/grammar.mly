@@ -12,7 +12,7 @@
 %token BREAK
 %token TRUE FALSE
 %token FTMLK
-%token INT BOOL
+%token INT BOOL UNIT
 %token MODULO
 %token PRINT
 %token ARROW
@@ -46,10 +46,11 @@ program:
 stmt:
     | PRINT LPAREN expr RPAREN { Print($3)}
     | LET ID COLON type_parse ASSIGN expr { LetStmt ($2, $4, $6, ref false)}
+    | LET ID COLON type_parse EQ expr { LetStmt ($2, $4, $6, ref false)}
     | stmt SEMICOLON stmt {Seq($1, $3)}
     | WHILE expr LBRACE stmt RBRACE {While($2, $4)}
     | ID ASSIGN expr {Assign($1, $3)}
-    | IF expr THEN stmt { IfUnit($2, $4) }
+    | IF expr LBRACE stmt RBRACE { IfUnit($2, $4) }
     | BREAK { Break }
 expr:
     | LPAREN expr RPAREN { $2 }
@@ -95,4 +96,5 @@ type_parse:
     | LPAREN type_parse RPAREN { $2} 
     | BOOL { Types.Bool }
     | INT { Types.Int }
+    | UNIT { Types.Unit }
     | type_parse ARROW type_parse { Types.Ftmlk ($1, $3)}
