@@ -32,6 +32,7 @@ module X64Frame : ArchFrame = struct
             List.fold_left update_stack 8 formals
         in
         (loc, updated_stack_size, formals)
+
     let alloc_var (size : int) (func : func) (loc : bool) = 
         if loc then
             Reg (Regs.new_temp ()), func

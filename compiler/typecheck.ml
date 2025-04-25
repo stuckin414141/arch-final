@@ -1,6 +1,11 @@
 type types = Types.t Symbols.SymbolTable.t
 let lookup = Symbols.SymbolTable.find_opt
 let rec typecheck_stmt ast (types : types) = 
+  let err_if_declared var_name = 
+    match Symbols.SymbolTable.find_opt var_name types with
+    | Some _ -> failwith ("Variable " ^ var_name ^ " already declared")
+    | None -> ()
+  in
   match ast with
   | Ast.Break -> (types, Types.Unit)
   | Ast.While (cond, body) ->
@@ -30,6 +35,7 @@ let rec typecheck_stmt ast (types : types) =
     else
       (types, Types.Unit)
   | Ast.LetStmt (var_name, var_type, init_expr, _, is_recursive) ->
+    err_if_declared var_name;
     let updated_types = Symbols.SymbolTable.add var_name var_type types in
     let init_type = 
         if is_recursive then

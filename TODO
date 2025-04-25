@@ -1,10 +1,10 @@
-ensure that you are okay with the scoping policies of the typechecker/syntax
-add recursion
-re-write the IR to a form of MIR
-- yes registers + labels, but also instructions
-- produced code will be a block/sequence of instructions
-- we will have if and jump statements as necessary
-Modify the lowering code to support STLC
-maybe add type inference
+implementing lowering to the typed MIR
+- we will have to make malloc() available as part of the external call
+- we will need architecture-specific information
+    - size of types
+    - we need to make external calls to malloc
+- we will need to add code to make variables afterwards
+verify that lowering closures works alright in MIR/write lowring of STLC
+implement polymorphic types/typechecking
+implement type-inference
 add arrays/pointers???????
-add/enable recursion
