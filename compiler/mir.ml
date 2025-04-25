@@ -5,6 +5,7 @@ type lval =
 type value = 
   | Lval of lval
   | Const of int
+  | Address of Labels.t
 
 type rval = 
   | Operation of value * Ast.ast_binop * value
@@ -20,5 +21,6 @@ type stmt =
   (*Stores at the memory location referred to by lval*)
   | Store of lval * value 
   (*Thing to store the value in, location of function, arguments*)
-  | Call of lval option * Labels.t * value list
-  | Label of Labels.t
+  | Call of lval option * rval * rval list
+  | MakeLabel of Labels.t
+  | Return of rval
