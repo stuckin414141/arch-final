@@ -1,5 +1,7 @@
 make test cases that 1] don't use closures 2] test records
 
+we are for now forbidding recursive types (will implement after closures)
+
 re-structure pipeline to better support debugging multiple analyses/re-writes
 - optimally you will have a single compilation pipeline
 - turning on debug mode dumps debug info to other files

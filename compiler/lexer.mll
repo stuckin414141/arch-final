@@ -46,6 +46,7 @@ rule token = parse
 | ";" {SEMICOLON}
 | "," {COMMA}
 | ":" {COLON}
+| "." {DOT}
 | "(" {LPAREN}
 | ")" {RPAREN}
 | "{" {LBRACE}
@@ -62,7 +63,7 @@ rule token = parse
 | "&" {BAND}
 | "|" {BOR}
 | "^" {BXOR}
-| upper|lower (digit|upper|lower|"_")* {ID (Lexing.lexeme lexbuf)}
+| (upper|lower) (digit|upper|lower|"_")* {ID (Lexing.lexeme lexbuf)}
 | digit+ {NUM (int_of_string (Lexing.lexeme lexbuf))}
 | eof {EOF}
 

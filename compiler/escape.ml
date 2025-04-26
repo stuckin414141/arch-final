@@ -67,6 +67,9 @@ and
     | Ast.Bool _ -> venv
     | Ast.RecordExp fields ->
         List.fold_left (fun venv (_, expr) -> analysis_expr venv depth expr) venv fields
+    | Ast.MemberOf (expr, _) ->
+        let updated_venv = analysis_expr venv depth expr in
+        updated_venv
 
 let analyze ast = 
   analysis_stmt Symbols.SymbolTable.empty 0 ast

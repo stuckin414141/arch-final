@@ -22,11 +22,18 @@ let rec convert_to_type (typ : UA.type_placeholder) (type_env : types) : Types.t
     in
       Record (List.map convert_field fields)
 
+let is_valid_record_type fields = 
+  List.fold_left (fun e (s, _) -> 
+    List.length (List.filter (fun (so, _) -> so = s)
+    fields) = 1 && e) true fields
+
 let rec check_valid_type_decl (type_name : string) 
   (body : UA.type_placeholder) (type_env : types): bool = 
     match body with
-    (*if it goes through a record then it's good by-default*)
-    | RecordType _ -> true
+    (*if it goes through a record, we check that there 
+      aren't duplicate names*)
+    | RecordType fields -> 
+      is_valid_record_type fields
     | ArrowType (t1, t2) ->
       (check_valid_type_decl type_name t1 type_env) && 
       (check_valid_type_decl type_name t2 type_env)
@@ -73,7 +80,6 @@ let rec typecheck_stmt ast (types : types * types) :
     else
       (types, Types.Unit, Ast.Print(expr_ast))
   | LetStmt (var_name, var_type, init_expr, is_closure, is_recursive) ->
-    print_endline ("Let stmt called with " ^ var_name);
     err_if_declared var_name;
     let real_type = convert_to_type var_type type_env in
     let updated_vars = Symbols.SymbolTable.add var_name real_type var_types in
@@ -116,6 +122,9 @@ let rec typecheck_stmt ast (types : types * types) :
     if not (check_valid_type_decl type_name type_body type_env) then
       failwith ("Ill-formed type declaration for " ^ type_name)
     else
+      let type_env : types = 
+        Symbols.SymbolTable.add type_name (Types.Placeholder) type_env 
+      in
       let real_type : Types.t = convert_to_type type_body type_env in
       let type_env : types = Symbols.SymbolTable.add type_name real_type type_env in
       ((var_types, type_env), Types.Unit, Ast.Nothing)
@@ -171,12 +180,17 @@ and typecheck_expr ast types =
         failwith "Arithmetic operations require integer operands"
       else
         (types, Types.Int, binop_ast)
+    | Ast.Leq | Ast.Geq | Ast.Lt | Ast.Gt ->
+      if left_type <> Types.Int || right_type <> Types.Int then
+        failwith "Comparison other than eq or neq require integers"
+      else
+        (types, Types.Bool, binop_ast)
     | Ast.And | Ast.Or ->
       if left_type <> Types.Bool || right_type <> Types.Bool then
         failwith "Logical operations require boolean operands"
       else
         (types, Types.Bool, binop_ast)
-    | Ast.Eq | Ast.Neq | Ast.Lt | Ast.Gt | Ast.Leq | Ast.Geq ->
+    | Ast.Eq | Ast.Neq   ->
       if left_type <> right_type then
         failwith "Comparison operations require operands of the same type"
       else
@@ -237,15 +251,38 @@ and typecheck_expr ast types =
           (name, typ, init_ast)
       in
       let fields_info = 
-        List.fold_left (fun l field -> (convert_field field) :: l) [] fields 
+        List.fold_right (fun field l -> (convert_field field) :: l) fields []
       in
-      let field_type = 
-        Types.Record (List.map (fun (name, typ, _) -> (name, typ)) fields_info)
+      let fields_type = 
+        List.map (fun (name, typ, _) -> (name, typ)) fields_info 
       in
       let field_ast = 
         Ast.RecordExp (List.map (fun (name, _, ast) -> (name, ast)) fields_info)
       in
-      (types, field_type, field_ast)
+      if not (is_valid_record_type fields_type) then
+        failwith "Bad record type";
+      (types, Record fields_type, field_ast)
+  | MemberOf (record, field) ->
+      let (_, record_type, record_ast) = typecheck_expr record types in
+      let get_field_type fields = 
+        let matching_fields = 
+          List.filter (fun (s, _) -> if s = field then true else false)
+          fields 
+        in
+          (match matching_fields with
+          | [] -> 
+            failwith ("Error: field " ^ field ^ " not found in 
+            record type " ^ (Util.string_of_type record_type))
+          | (_, t) :: [] -> t
+          | _ -> failwith "Too many records of same name"
+          )
+      in
+      (match record_type with
+      | Record fields ->
+        (types, get_field_type fields, MemberOf (record_ast, field))
+      | _ -> 
+        failwith "Error: attempted to dereference field 
+        on non-record type")
 let analyze ast = 
   let initial_var_types = Symbols.SymbolTable.empty in
   typecheck_stmt ast (initial_var_types, Types.env)

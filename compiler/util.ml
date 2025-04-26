@@ -43,6 +43,7 @@ let token_to_string (t : Grammar.token) : string =
     | Grammar.PRINT -> "PRINT"
     | Grammar.ARROW -> "ARROW"
     | Grammar.TRUE -> "TRUE"
+    | Grammar.DOT -> "DOT"
     | Grammar.FALSE -> "FALSE"
     | Grammar.REC -> "REC"
 
@@ -74,6 +75,7 @@ let rec string_of_type : Types.t -> string = function
     | Types.Record fields ->
         let field_strs = List.map (fun (name, typ) -> name ^ ": " ^ string_of_type typ) fields in
         "{" ^ String.concat ", " field_strs ^ "}"
+    | Types.Placeholder -> "Placeholder"
 let indent n = 
     for _ = 0 to n - 1 do
         print_char ' '
@@ -215,6 +217,12 @@ and print_ast_expr depth = function
             print_endline "Expr";
             print_ast_expr (depth + 6) expr
         ) fields
+    | Ast.MemberOf (expr, field) ->
+        indent depth;
+        print_endline ("MemberOf " ^ field);
+        indent (depth + 2);
+        print_endline "Expr";
+        print_ast_expr (depth + 4) expr
 
 (* Print functions for untyped AST *)
 
@@ -388,6 +396,12 @@ and print_untyped_expr depth = function
           print_endline "Expr";
           print_untyped_expr (depth + 6) expr
       ) fields
+  | Untyped_ast.MemberOf (expr, field) ->
+      indent depth;
+      print_endline ("MemberOf " ^ field);
+      indent (depth + 2);
+      print_endline "Expr";
+      print_untyped_expr (depth + 4) expr
 
 (* Main function to print an entire untyped AST *)
 let print_untyped_ast stmt =

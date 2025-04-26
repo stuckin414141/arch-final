@@ -9,6 +9,7 @@
 %token PLUS MINUS TIMES DIVIDE EQ NEQ LT LE GT GE BOR BAND BXOR SHL SHR
 %token AND OR ASSIGN
 %token IF THEN ELSE WHILE LET IN TYPE
+%token DOT
 %token BREAK
 %token REC
 %token TRUE FALSE
@@ -56,6 +57,7 @@ stmt:
 expr:
     | LPAREN expr RPAREN { $2 }
     | ID { Var($1) }
+    | expr DOT ID {MemberOf ($1, $3)}
     | TRUE { Bool(true) }
     | FALSE { Bool(false) }
     | expr LPAREN exprlist RPAREN { FtmlkApp($1, $3) }
@@ -84,7 +86,7 @@ expr:
     | stmt SEMICOLON expr { ESeq($1, $3) }
     | LBRACE fieldlist RBRACE { RecordExp ($2) }
     | FTMLK LPAREN decllist RPAREN LBRACE expr RBRACE 
-        { Ftmlk ($3, $6)}
+        { Ftmlk ($3, $6)}    
 
 decllist:
     | { [] }
@@ -102,7 +104,7 @@ fieldlist:
 
 record_type:
     | ID COLON type_parse {[($1, $3)]}
-    | ID COLON type_parse COMMA record_type {($1, $3) :: $5}
+    | ID COLON type_parse SEMICOLON record_type {($1, $3) :: $5}
 
 type_parse:
     | ID { Typ ($1) }

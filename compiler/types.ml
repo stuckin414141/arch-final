@@ -4,6 +4,7 @@ type t =
   | Ftmlk of t * t
   | Unit
   | Record of (string * t) list
+  | Placeholder
 
 type env = t Symbols.SymbolTable.t
 

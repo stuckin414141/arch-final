@@ -18,6 +18,9 @@ type stmt =
   | Break
 and
   expr = 
+  (*Reference the member at field of string from struct
+  of expr*)
+  | MemberOf of expr * string
   | Var of string
   | Num of int
   | Bool of bool

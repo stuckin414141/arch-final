@@ -33,6 +33,7 @@ type stmt =
   | Nothing
 and
   expr = 
+  | MemberOf of expr * string
   | Var of string
   | Num of int
   | Bool of bool
