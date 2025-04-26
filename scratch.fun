@@ -1,8 +1,1 @@
-while t { 
-    print(1)
-};
-
-if f then {
-    print(0)
-}
-
+let x : int = 2

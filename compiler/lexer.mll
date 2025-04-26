@@ -20,9 +20,6 @@ rule token = parse
 | '\n' {next_line lexbuf; token lexbuf}
 | whitespace+ {token lexbuf}
 | "//" {comment lexbuf}
-| "int" {INT}
-| "bool" {BOOL}
-| "unit" {UNIT}
 | "print" {PRINT}
 | "while" {WHILE}
 | "true" {TRUE}
@@ -30,6 +27,7 @@ rule token = parse
 | "if" {IF}
 | "then" {THEN}
 | "break" {BREAK}
+| "type" {TYPE}
 | "ftmlk" {FTMLK}
 | "else" {ELSE}
 | "let" {LET}

@@ -29,11 +29,14 @@ type stmt =
   | IfUnit of expr * stmt
   | Seq of stmt * stmt
   | Break
+  (*Stopgap *)
+  | Nothing
 and
   expr = 
   | Var of string
   | Num of int
   | Bool of bool
+  | RecordExp of (string * expr) list
   | If of expr * expr * expr
   | Let of string * Types.t * expr * expr * bool ref * bool
   | BinOp of expr * ast_binop * expr

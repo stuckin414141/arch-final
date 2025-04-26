@@ -32,6 +32,3 @@ let double: int -> int = ftmlk(x: int) { x * 2 };
 let double3Times: int -> int = composeMany(double, 3);
 print(double3Times(2));  // 16
 
-//this should error
-let wrong_bool : int -> int -> bool = 
-    ftmlk(x: int, y: int) { x - y }

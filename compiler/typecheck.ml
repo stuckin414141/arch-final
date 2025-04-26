@@ -1,153 +1,211 @@
-type types = Types.t Symbols.SymbolTable.t
+(*The overall goal of this stage (aside from checking that types are valid)
+* Is producing a typed AST
+*)
+
+type types = Types.env
 let lookup = Symbols.SymbolTable.find_opt
-let rec typecheck_stmt ast (types : types) = 
+
+module UA = Untyped_ast
+
+let rec convert_to_type (typ : UA.type_placeholder) (type_env : types) : Types.t =
+  match typ with
+  | Typ name ->
+    (match Symbols.SymbolTable.find_opt name type_env with 
+    | Some real -> real
+    | None -> failwith ("Type " ^ name ^ " used before declaration")
+    )
+  | ArrowType (arg, rest) ->
+    Ftmlk (convert_to_type arg type_env, convert_to_type rest type_env)
+  | RecordType fields ->
+    let 
+      convert_field (s, t) : string * Types.t= (s, convert_to_type t type_env) 
+    in
+      Record (List.map convert_field fields)
+
+let rec check_valid_type_decl (type_name : string) 
+  (body : UA.type_placeholder) (type_env : types): bool = 
+    match body with
+    (*if it goes through a record then it's good by-default*)
+    | RecordType _ -> true
+    | ArrowType (t1, t2) ->
+      (check_valid_type_decl type_name t1 type_env) && 
+      (check_valid_type_decl type_name t2 type_env)
+    | Typ str ->
+      if type_name = str then false
+      else true
+
+(*first part of types is for variables fyi*)
+let rec typecheck_stmt ast (types : types * types) : 
+(types * types) * Types.t * Ast.stmt = 
+  let (var_types, type_env) = types in
   let err_if_declared var_name = 
-    match Symbols.SymbolTable.find_opt var_name types with
-    | Some _ -> failwith ("Variable " ^ var_name ^ " already declared")
+    match (lookup var_name var_types) with
+    | Some _ -> failwith (var_name ^ " is already declared")
     | None -> ()
   in
   match ast with
-  | Ast.Break -> (types, Types.Unit)
-  | Ast.While (cond, body) ->
-      let (cond_types, cond_type) = typecheck_expr cond types in
+  | UA.Break -> (types, Types.Unit, Ast.Break)
+  | UA.While (cond, body) ->
+      let (cond_types, cond_type, cond_ast) = typecheck_expr cond types in
       if cond_type <> Types.Bool then
         failwith "Condition of while loop must be a boolean"
       else
-        let (_, body_type) = typecheck_stmt body cond_types in
+        let (_, body_type, body_ast) = typecheck_stmt body cond_types in
         if body_type <> Types.Unit then
           failwith "Body of while loop must be a unit"
         else
-          (types, Types.Unit)
-  | Ast.IfUnit (cond, body) ->
-    let (cond_types, cond_type) = typecheck_expr cond types in
+          let while_ast = Ast.While (cond_ast, body_ast) in
+          (types, Types.Unit, while_ast)
+  | IfUnit (cond, body) ->
+    let (cond_types, cond_type, cond_ast) = typecheck_expr cond types in
     if cond_type <> Types.Bool then
       failwith "Condition of if unit must be a boolean"
     else
-      let (_, body_type) = typecheck_stmt body cond_types in
+      let (_, body_type, body_ast) = typecheck_stmt body cond_types in
       if body_type <> Types.Unit then
         failwith "Body of if unit must be a unit"
       else
-        (types, Types.Unit)
-  | Ast.Print expr ->
-    let (_, expr_type) = typecheck_expr expr types in
+        (types, Types.Unit, Ast.IfUnit(cond_ast, body_ast))
+  | Print expr ->
+    let (_, expr_type, expr_ast) = typecheck_expr expr types in
     if expr_type = Types.Unit then
       failwith "Print expression must not return unit"
     else
-      (types, Types.Unit)
-  | Ast.LetStmt (var_name, var_type, init_expr, _, is_recursive) ->
+      (types, Types.Unit, Ast.Print(expr_ast))
+  | LetStmt (var_name, var_type, init_expr, is_closure, is_recursive) ->
+    print_endline ("Let stmt called with " ^ var_name);
     err_if_declared var_name;
-    let updated_types = Symbols.SymbolTable.add var_name var_type types in
-    let init_type = 
+    let real_type = convert_to_type var_type type_env in
+    let updated_vars = Symbols.SymbolTable.add var_name real_type var_types in
+    let (init_type, init_expr) = 
         if is_recursive then
-          let (_, init_type) = typecheck_expr init_expr updated_types in
-          init_type
+          let (_, init_type, init_expr) = typecheck_expr init_expr (updated_vars, type_env) in
+          (init_type, init_expr)
         else
-          let (_, init_type) = typecheck_expr init_expr types in
-          init_type
+          let (_, init_type, init_expr) = typecheck_expr init_expr types in
+          (init_type, init_expr)
       in
-      if init_type <> var_type then
+      if init_type <> real_type then
         failwith "Type of initialization statement does not match variable type"
       else
-        (updated_types, Types.Unit)
-  | Ast.Assign (var_name, expr) ->
-    (match lookup var_name types with
+        ((updated_vars, type_env), Types.Unit, 
+        Ast.LetStmt (var_name, real_type, init_expr, is_closure, is_recursive))
+  | Assign (var_name, expr) ->
+    (match lookup var_name var_types with
     | Some typ ->
-      let (_, expr_type) = typecheck_expr expr types in
+      let (_, expr_type, expr_ast) = typecheck_expr expr types in
       if expr_type <> typ then
         failwith "Type of assignment does not match variable type"
       else
-        (types, Types.Unit)
+        (types, Types.Unit, Ast.Assign (var_name, expr_ast))
     | None ->
       failwith ("Variable " ^ var_name ^ " assigned before declaration")
     )
-  | Ast.Seq (stmt1, stmt2) ->
+  | Seq (stmt1, stmt2) ->
     let check_unit_and_propogate stmt types = 
-        let (types_env, typ) = typecheck_stmt stmt types in
+        let (types, typ, stmt_ast) = typecheck_stmt stmt types in
         if typ <> Types.Unit then
           failwith "Statement in statement sequence must be a unit"
         else
-          types_env
+          (types, stmt_ast)
     in
-    let updated_types = 
-    check_unit_and_propogate stmt1 types |> 
-    check_unit_and_propogate stmt2
-    in
-    (updated_types, Types.Unit)
+    let (types, stmt1_ast) = check_unit_and_propogate stmt1 types in
+    let (types, stmt2_ast) = check_unit_and_propogate stmt2 types in
+    (types, Types.Unit, Ast.Seq(stmt1_ast, stmt2_ast))
+  | TypeDecl (type_name, type_body) ->
+    if not (check_valid_type_decl type_name type_body type_env) then
+      failwith ("Ill-formed type declaration for " ^ type_name)
+    else
+      let real_type : Types.t = convert_to_type type_body type_env in
+      let type_env : types = Symbols.SymbolTable.add type_name real_type type_env in
+      ((var_types, type_env), Types.Unit, Ast.Nothing)
 and typecheck_expr ast types = 
+  let (var_types, type_env) = types in
   match ast with
-  | Ast.Var var_name ->
-    (match lookup var_name types with
-    | Some typ -> (types, typ)
+  | UA.Var var_name ->
+    (match lookup var_name var_types with
+    | Some typ -> (types, typ, Ast.Var var_name)
     | None -> failwith ("Variable " ^ var_name ^ " used before declaration"))
-  | Ast.Num _ -> (types, Types.Int)
-  | Ast.Bool _ -> (types, Types.Bool)
-  | Ast.If (cond, then_expr, else_expr) ->
-    let (_, cond_type) = typecheck_expr cond types in
+  | Num n -> (types, Types.Int, Ast.Num n)
+  | Bool b -> (types, Types.Bool, Ast.Bool b)
+  | If (cond, then_expr, else_expr) ->
+    let (cond_types, cond_type, cond_ast) = typecheck_expr cond types in
     if cond_type <> Types.Bool then
       failwith "Condition of if expression must be a boolean"
     else
-      let (_, then_type) = typecheck_expr then_expr types in
-      let (_, else_type) = typecheck_expr else_expr types in
+      let (_, then_type, then_ast) = typecheck_expr then_expr cond_types in
+      let (_, else_type, else_ast) = typecheck_expr else_expr cond_types in
       if then_type <> else_type then
         failwith "Then and else branches of if expression must have the same type"
       else
-        (types, then_type)
-  | Ast.Let (var_name, var_type, init_expr, body_expr, _, is_recursive) ->
-      let updated_types = Symbols.SymbolTable.add var_name var_type types in
-      let init_type = 
+        (types, then_type, Ast.If(cond_ast, then_ast, else_ast))
+  | Let (var_name, var_type, init_expr, body_expr, is_closure, is_recursive) ->
+      let real_var_type : Types.t = convert_to_type var_type type_env in
+      let updated_var_types = Symbols.SymbolTable.add var_name real_var_type var_types in
+      let updated_types = (updated_var_types, type_env) in
+      let init_type, init_expr = 
         if is_recursive then
-          let (_, init_type) = typecheck_expr init_expr updated_types in
-          init_type
+          let (_, init_type, init_expr) = 
+            typecheck_expr init_expr updated_types 
+          in
+          init_type, init_expr
         else
-          let (_, init_type) = typecheck_expr init_expr types in
-          init_type
+          let (_, init_type, init_expr) = typecheck_expr init_expr types in
+          init_type, init_expr
       in
-      if init_type <> var_type then
+      if init_type <> real_var_type then
         failwith "Type of initialization statement does not match variable type"
       else
-        let (_, body_type) = typecheck_expr body_expr updated_types in
-        (types, body_type)
-  | Ast.BinOp (left, op, right) ->
-    let (_, left_type) = typecheck_expr left types in
-    let (_, right_type) = typecheck_expr right types in
+        let (_, body_type, body_expr) = typecheck_expr body_expr updated_types in
+        (types, body_type, 
+        Ast.Let(var_name, real_var_type, init_expr, body_expr, 
+        is_closure, is_recursive))
+  | BinOp (left, op, right) ->
+    let (_, left_type, left_expr) = typecheck_expr left types in
+    let (_, right_type, right_expr) = typecheck_expr right types in
+    let binop_ast : Ast.expr = Ast.BinOp (left_expr, op, right_expr) in
     (match op with
     | Ast.Plus | Ast.Minus | Ast.Times | Ast.Div | Ast.Mod
       | Ast.Shl | Ast.Shr | Ast.BAnd | Ast.BOr | Ast.BXor ->
       if left_type <> Types.Int || right_type <> Types.Int then
         failwith "Arithmetic operations require integer operands"
       else
-        (types, Types.Int)
+        (types, Types.Int, binop_ast)
     | Ast.And | Ast.Or ->
       if left_type <> Types.Bool || right_type <> Types.Bool then
         failwith "Logical operations require boolean operands"
       else
-        (types, Types.Bool)
+        (types, Types.Bool, binop_ast)
     | Ast.Eq | Ast.Neq | Ast.Lt | Ast.Gt | Ast.Leq | Ast.Geq ->
       if left_type <> right_type then
         failwith "Comparison operations require operands of the same type"
       else
-        (types, Types.Bool))
-  | Ast.Ftmlk (params, body) ->
+        (types, Types.Bool, binop_ast))
+  | Ftmlk (params, body) ->
     let param_to_ftmlk params ret = 
       List.fold_right (fun param cur_typ -> Types.Ftmlk (param, cur_typ)) params ret
     in
-    let rec check_params params types =
+    let rec build_func_env params var_types =
       match params with
-      | [] -> types
+      | [] -> var_types
       | (name, typ, _) :: rest ->
-        let updated_types = Symbols.SymbolTable.add name typ types in
-        check_params rest updated_types
+        let real_type = convert_to_type typ type_env in
+        let updated_var_types = Symbols.SymbolTable.add name real_type var_types in
+        build_func_env rest updated_var_types
     in
-    let updated_types = check_params params types in
-    let (_, body_type) = typecheck_expr body updated_types in
-    let param_types = List.map (fun (_, typ, _) -> typ) params in 
+    let updated_var_types = build_func_env params var_types in
+    let updated_types = (updated_var_types, type_env) in
+    let (_, body_type, body_expr) = typecheck_expr body updated_types in
+    let params_with_types = List.map (fun (name, typ, b) -> 
+      (name, convert_to_type typ type_env, b)) params in
+    let param_types = List.map (fun (_, typ, _) -> convert_to_type typ type_env) params in 
     let func_type = param_to_ftmlk param_types body_type in
-    (types, func_type)
-  | Ast.FtmlkApp (func, args) ->
+    (types, func_type, Ast.Ftmlk (params_with_types, body_expr))
+  | FtmlkApp (func, args) ->
     (*Any definitions make either in func or in any of the 
     args will not be available outside of them*)
     let check_outer_arg func_type arg = 
-      let (_, arg_type) = typecheck_expr arg types in
+      let (_, arg_type, _) = typecheck_expr arg types in
       (match func_type with
       | Types.Ftmlk (outer, rest) ->
         if outer <> arg_type then 
@@ -157,14 +215,37 @@ and typecheck_expr ast types =
       (*All arguments have been applied, so this is an error*)
       | _ -> failwith "too many arguments")
     in
-    let (_, func_type) = typecheck_expr func types in
-    (types, List.fold_left check_outer_arg func_type args)
-  | Ast.ESeq (stmt, expr) ->
-    let (types, stmt_type) = typecheck_stmt stmt types in
+    let arg_ast arg = 
+      let (_, _, arg_ast) = typecheck_expr arg types in
+      arg_ast
+    in
+    let args_ast = List.map arg_ast args in
+    let (_, func_type, func_ast) = typecheck_expr func types in
+    (types, List.fold_left check_outer_arg func_type args, Ast.FtmlkApp(func_ast, args_ast))
+  | ESeq (stmt, expr) ->
+    let (types, stmt_type, stmt_ast) = typecheck_stmt stmt types in
     if stmt_type <> Types.Unit then
       failwith "Statement in ESeq doesn't return Unit"
     else
-      (types, typecheck_expr expr types |> snd)
-
+      let (_, expr_type, expr_ast) = typecheck_expr expr types in
+      (types, expr_type, Ast.ESeq (stmt_ast, expr_ast))
+  | RecordExp fields -> 
+      let convert_field (name, init_expr) = 
+        let (_, typ, init_ast) = 
+          (typecheck_expr init_expr types) 
+        in
+          (name, typ, init_ast)
+      in
+      let fields_info = 
+        List.fold_left (fun l field -> (convert_field field) :: l) [] fields 
+      in
+      let field_type = 
+        Types.Record (List.map (fun (name, typ, _) -> (name, typ)) fields_info)
+      in
+      let field_ast = 
+        Ast.RecordExp (List.map (fun (name, _, ast) -> (name, ast)) fields_info)
+      in
+      (types, field_type, field_ast)
 let analyze ast = 
-  typecheck_stmt ast Symbols.SymbolTable.empty
+  let initial_var_types = Symbols.SymbolTable.empty in
+  typecheck_stmt ast (initial_var_types, Types.env)

@@ -1,5 +1,5 @@
 %{
-    open Ast
+    open Untyped_ast
 %}
 
 %token EOF
@@ -8,18 +8,17 @@
 %token COMMA COLON SEMICOLON LPAREN RPAREN LBRACE RBRACE
 %token PLUS MINUS TIMES DIVIDE EQ NEQ LT LE GT GE BOR BAND BXOR SHL SHR
 %token AND OR ASSIGN
-%token IF THEN ELSE WHILE LET IN
+%token IF THEN ELSE WHILE LET IN TYPE
 %token BREAK
 %token REC
 %token TRUE FALSE
 %token FTMLK
-%token INT BOOL UNIT
 %token MODULO
 %token PRINT
 %token ARROW
 
 %start program
-%type<Ast.stmt> program
+%type<Untyped_ast.stmt> program
 
 %left SEMICOLON
 %nonassoc ELSE
@@ -52,6 +51,7 @@ stmt:
     | WHILE expr LBRACE stmt RBRACE {While($2, $4)}
     | ID ASSIGN expr {Assign($1, $3)}
     | IF expr LBRACE stmt RBRACE { IfUnit($2, $4) }
+    | TYPE ID EQ type_parse { TypeDecl ($2, $4)}
     | BREAK { Break }
 expr:
     | LPAREN expr RPAREN { $2 }
@@ -82,6 +82,7 @@ expr:
     | expr SHL expr { BinOp($1, Shl, $3) }
     | expr SHR expr { BinOp($1, Shr, $3) }
     | stmt SEMICOLON expr { ESeq($1, $3) }
+    | LBRACE fieldlist RBRACE { RecordExp ($2) }
     | FTMLK LPAREN decllist RPAREN LBRACE expr RBRACE 
         { Ftmlk ($3, $6)}
 
@@ -94,9 +95,17 @@ exprlist:
     | expr { [$1] }
     | expr COMMA exprlist { $1 :: $3 }
 
+fieldlist:
+    | ID EQ expr { [($1, $3)]}
+    | ID EQ expr SEMICOLON fieldlist { ($1, $3) :: $5}
+
+
+record_type:
+    | ID COLON type_parse {[($1, $3)]}
+    | ID COLON type_parse COMMA record_type {($1, $3) :: $5}
+
 type_parse:
-    | LPAREN type_parse RPAREN { $2} 
-    | BOOL { Types.Bool }
-    | INT { Types.Int }
-    | UNIT { Types.Unit }
-    | type_parse ARROW type_parse { Types.Ftmlk ($1, $3)}
+    | ID { Typ ($1) }
+    | LBRACE record_type RBRACE { RecordType ($2)}
+    | LPAREN type_parse RPAREN { $2 } 
+    | type_parse ARROW type_parse { ArrowType ($1, $3)}

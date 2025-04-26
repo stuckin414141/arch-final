@@ -47,6 +47,7 @@ type func = int * int
 let word_size = 8
 
 let insts (inst, _, _) = inst
+    
 let rec lower_stmt func loop_end ast renamings : (Mir.stmt list * renamings * func) =
     let (depth, closure_offset) = func in
     let write_closure_val = write_closure_val depth

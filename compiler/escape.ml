@@ -29,6 +29,7 @@ let rec analysis_stmt (venv : escape_table) depth = function
   | Ast.IfUnit (cond, body) ->
       let updated_venv = analysis_expr venv depth cond in
       analysis_stmt updated_venv depth body
+  | Ast.Nothing -> venv
   | Break -> venv
 and 
    analysis_expr (venv : escape_table) depth = function
@@ -64,6 +65,8 @@ and
       in
       analysis_expr venv_after_args depth func
     | Ast.Bool _ -> venv
+    | Ast.RecordExp fields ->
+        List.fold_left (fun venv (_, expr) -> analysis_expr venv depth expr) venv fields
 
 let analyze ast = 
   analysis_stmt Symbols.SymbolTable.empty 0 ast

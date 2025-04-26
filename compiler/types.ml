@@ -3,3 +3,13 @@ type t =
   | Int
   | Ftmlk of t * t
   | Unit
+  | Record of (string * t) list
+
+type env = t Symbols.SymbolTable.t
+
+let u (typ : string) (real : t) : (env ->env) = 
+  Symbols.SymbolTable.add typ real
+let env = Symbols.SymbolTable.empty |>
+  u "bool" Bool |>
+  u "int" Int |>
+  u "unit" Unit 
