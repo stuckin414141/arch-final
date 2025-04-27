@@ -1,0 +1,32 @@
+// some basic multi-argument
+let add : int -> int -> int = 
+    ftmlk(x : int, y : int) {
+        x + y 
+    };
+
+print(add(10, 30));
+
+//a simple higher-order function
+let twice : (int -> int) -> int -> int = 
+    ftmlk (f : int -> int, arg : int) {
+        f ( f ( arg ))
+    };
+
+let square : int -> int = 
+    ftmlk (x : int) {
+        x * x
+    };
+
+print(twice(square, 4));
+
+//composition
+let compose : (int -> int) -> (int -> int) -> int -> int = 
+    ftmlk (f : int -> int, g : int -> int, x : int) {
+        let intermediate : int = f(x) in
+        g(intermediate)
+    };
+let over_four : int -> int =
+    ftmlk (x : int) {
+        x / 4
+    };
+print(compose(square, over_four, 4));

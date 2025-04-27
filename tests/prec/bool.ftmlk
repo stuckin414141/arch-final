@@ -15,11 +15,11 @@ let c6: bool = 3 < 5 || 2 > 5;          // Should be true||false = true
 let c7: bool = 3 == 3 && 4 != 5;        // Should be true&&true = true
 let c8: bool = true && 5 < 3 || 2 < 5;  // Should be (true && false) || true = true
 
-print(c1);
-print(c2);
-print(c3);
-print(c4);
-print(c5);
-print(c6);
-print(c7);
-print(c8)
+print(int_to_bool(c1));
+print(int_to_bool(c2));
+print(int_to_bool(c3));
+print(int_to_bool(c4));
+print(int_to_bool(c5));
+print(int_to_bool(c6));
+print(int_to_bool(c7));
+print(int_to_bool(c8))

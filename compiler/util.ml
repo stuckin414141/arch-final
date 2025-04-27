@@ -399,10 +399,10 @@ let string_of_mir_stmt depth stmt =
       indentation ^ "Assign " ^ string_of_lval lval ^ " := " ^
       string_of_expr expr ^ " (size: " ^ string_of_int size ^ ")\n"
   | Mir.AssignDeref (lval, expr, size) ->
-      indentation ^ "AssignDeref " ^ string_of_lval lval ^ " := *" ^
+      indentation ^ "AssignDeref " ^ string_of_lval lval ^ " := " ^
       string_of_expr expr ^ " (size: " ^ string_of_int size ^ ")\n"
   | Mir.Store (dest, src, size) ->
-      indentation ^ "Store *" ^ string_of_expr dest ^ " := " ^
+      indentation ^ "Store " ^ string_of_expr dest ^ " := " ^
       string_of_expr src ^ " (size: " ^ string_of_int size ^ ")\n"
   | Mir.Call (dest_opt, func, args) ->
       let dest_str = match dest_opt with
@@ -410,8 +410,8 @@ let string_of_mir_stmt depth stmt =
         | Some lval -> string_of_lval lval ^ " := "
       in
       let args_str = String.concat ", " (List.map string_of_value args) in
-      indentation ^ "Call " ^ dest_str ^ 
-      string_of_value func ^ "(" ^ args_str ^ ")\n"
+      indentation ^ dest_str ^ "Call " ^
+      string_of_value func ^ " (" ^ args_str ^ ")\n"
   | Mir.MakeLabel label ->
       indentation ^ "Label " ^ Labels.to_string label ^ "\n"
   | Mir.Return value ->
@@ -420,3 +420,6 @@ let string_of_mir_stmt depth stmt =
 (* Entry point function for MIR *)
 let string_of_mir stmts =
   String.concat "" (List.map (string_of_mir_stmt 0) stmts)
+
+let string_of_mir_list funcs = 
+  String.concat "\n\n" (List.map (string_of_mir) funcs)

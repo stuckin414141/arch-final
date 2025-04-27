@@ -54,7 +54,10 @@ let compile filename debug =
     let (_, _, typed_ast) = Compiler.Typecheck.analyze untyped_ast in
     (if debug then
         output "ast" (Compiler.Util.string_of_ast typed_ast));
-    typed_ast
+    let mir = Compiler.Lower_mir.lower false 8 typed_ast in
+    (if debug then 
+        output "mir" (Compiler.Util.string_of_mir_list mir));
+    mir
 
 let lex_cmd = 
     Command.basic

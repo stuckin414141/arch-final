@@ -1,0 +1,19 @@
+type Point = {x: int; y: int};
+let p1: Point = {x = 5; y = 10};
+let p2: Point = {x = 3; y = 7};
+print(p1.x + p2.y);
+
+type Person = {age: int; active: bool; employed : bool;
+gender : int; income : int};
+let employee: Person = {
+  age = 30;
+  active = true;
+  employed = false;
+  gender = 40000;
+  income = 9
+};
+
+print(employee.gender);
+if employee.active {
+    print(1)
+};

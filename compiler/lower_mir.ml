@@ -7,25 +7,31 @@ let generate_struct_layout (word_sz : int) (must_be_aligned : bool)
     match fields with 
     | [] -> (Symbols.SymbolTable.empty, cur_off)
     | (name, typ) :: rest -> 
-      let get_rest_offsets next_slot = 
-        logic (cur_off + next_slot) rest
-      in
       if must_be_aligned then
         let rest_offsets, sz = logic (cur_off + word_sz) rest in
-        Symbols.SymbolTable.add name (cur_off) rest_offsets, sz
+        Symbols.SymbolTable.add name (cur_off) rest_offsets,sz
       else
-        let (next_slot, cur_sz) = 
+        let (next_slot, cur_slot) = 
         (match typ with
         | Types.Bool -> 
           (*This is the only case where we might not want to preserve alignment*)
-          (cur_off + 1, 1)
+          (cur_off + 1, cur_off)
         | __ ->
           (*Everything else is word-sized*)
-          (cur_off / word_sz + word_sz, word_sz)
-          )
+          (*In case this is misaligned*)
+          if (cur_off mod word_sz <> 0) then
+            let cur_slot = 
+              ((cur_off / word_sz) * word_sz) + word_sz 
+            in
+            let next_slot = 
+              cur_slot + word_sz
+            in
+            (next_slot, cur_slot)
+          else
+            (cur_off + word_sz, cur_off))
         in
-        let (offsets, size) = get_rest_offsets next_slot in
-        offsets |> Symbols.SymbolTable.add name cur_sz,
+        let (offsets, size) = logic next_slot rest in
+        offsets |> Symbols.SymbolTable.add name cur_slot,
         size
   in
   logic 0 fields
@@ -200,7 +206,7 @@ and expr_to_mir
     let offsets, sz = 
       fields
       |> List.map (fun (name, _, typ) -> (name, typ))
-      |> generate_struct_layout word_size true 
+      |> generate_struct_layout word_size must_be_aligned 
     in
     let alloc_mem : Mir.stmt = 
       Call (
@@ -215,6 +221,8 @@ and expr_to_mir
         | (field_name, expr, typ) :: rest -> 
           let (expr_insts, expr_val, _) = reg_etm renamings expr in
           let field_offset = lookup field_name offsets in
+          print_endline ("Offset " ^ string_of_int field_offset ^ 
+          " for " ^ field_name);
           let field_addr = 
             Mir.Operation (Lval (Temp res), Plus, Const field_offset) 
           in
@@ -239,11 +247,13 @@ and expr_to_mir
     Goto (else_label, None)] @ 
     then_insts @
     [
+      MakeLabel (then_label);
       Assign (Temp result_reg, Value then_val, size_of_type typ);
       Goto (end_label, None)
     ] @
     else_insts @
-    [ Assign (Temp result_reg, Value else_val, size_of_type typ);
+    [ MakeLabel (else_label);
+      Assign (Temp result_reg, Value else_val, size_of_type typ);
       MakeLabel end_label]), Lval (Temp result_reg), renamings
   | Let (var_name, var_typ, init_expr, body_expr, _, _) ->
     let var_name, body_renamings = 
@@ -334,3 +344,9 @@ and ftmlk_to_mir
   in
   all_mir := func_insts :: !all_mir;
   (Mir.Address func_label)
+
+let lower (must_be_aligned : bool) (word_size : int) 
+  (ast : Ast.stmt) : Mir.stmt list list = 
+  let (main, _) = stat_to_mir must_be_aligned word_size None
+  Renamings.empty ast in
+  (Mir.MakeLabel (Labels.named_label "main") :: main) :: !all_mir

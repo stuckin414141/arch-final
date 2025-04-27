@@ -1,0 +1,28 @@
+Label main
+Temp(t0) := Call Address(gib_mem) (Const(16))
+Store Operation(Temp(t0), +, Const(0)) := Value(Const(5)) (size: 8)
+Store Operation(Temp(t0), +, Const(8)) := Value(Const(10)) (size: 8)
+Assign Var(p10) := Value(Temp(t0)) (size: 8)
+Temp(t1) := Call Address(gib_mem) (Const(16))
+Store Operation(Temp(t1), +, Const(0)) := Value(Const(3)) (size: 8)
+Store Operation(Temp(t1), +, Const(8)) := Value(Const(7)) (size: 8)
+Assign Var(p20) := Value(Temp(t1)) (size: 8)
+AssignDeref Temp(t2) := Operation(Var(p10), +, Const(0)) (size: 8)
+AssignDeref Temp(t3) := Operation(Var(p20), +, Const(8)) (size: 8)
+Assign Temp(t4) := Operation(Temp(t2), +, Temp(t3)) (size: 8)
+Call Address(print) (Temp(t4))
+Temp(t5) := Call Address(gib_mem) (Const(32))
+Store Operation(Temp(t5), +, Const(0)) := Value(Const(30)) (size: 8)
+Store Operation(Temp(t5), +, Const(8)) := Value(Const(1)) (size: 1)
+Store Operation(Temp(t5), +, Const(9)) := Value(Const(0)) (size: 1)
+Store Operation(Temp(t5), +, Const(16)) := Value(Const(40000)) (size: 8)
+Store Operation(Temp(t5), +, Const(24)) := Value(Const(9)) (size: 8)
+Assign Var(employee0) := Value(Temp(t5)) (size: 8)
+AssignDeref Temp(t6) := Operation(Var(employee0), +, Const(16)) (size: 8)
+Call Address(print) (Temp(t6))
+AssignDeref Temp(t7) := Operation(Var(employee0), +, Const(8)) (size: 1)
+Goto L0 if Value(Temp(t7))
+Goto L1
+Label L0
+Call Address(print) (Const(1))
+Label L1

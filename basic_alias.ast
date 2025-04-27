@@ -1,0 +1,94 @@
+Seq
+  Seq
+    Seq
+      Seq
+        Seq
+          Seq
+            Seq
+              Nothing
+              LetStmt p1
+                type: {x: int, y: int}
+                Expr
+                  RecordExp
+                    Field x
+                      Expr
+                        Num 5
+                      Type: int
+                    Field y
+                      Expr
+                        Num 10
+                      Type: int
+                Ref: false
+                Is recursive: false
+            LetStmt p2
+              type: {x: int, y: int}
+              Expr
+                RecordExp
+                  Field x
+                    Expr
+                      Num 3
+                    Type: int
+                  Field y
+                    Expr
+                      Num 7
+                    Type: int
+              Ref: false
+              Is recursive: false
+          Print
+            BinOp +
+              Left
+                MemberOf 
+                  Expr
+                    Var p1
+                  Type: {x: int, y: int}
+                    Field: x
+              Right
+                MemberOf 
+                  Expr
+                    Var p2
+                  Type: {x: int, y: int}
+                    Field: y
+              Type: int
+        Nothing
+      LetStmt employee
+        type: {age: int, active: bool, employed: bool, gender: int, income: int}
+        Expr
+          RecordExp
+            Field age
+              Expr
+                Num 30
+              Type: int
+            Field active
+              Expr
+                Bool true
+              Type: bool
+            Field employed
+              Expr
+                Bool false
+              Type: bool
+            Field gender
+              Expr
+                Num 40000
+              Type: int
+            Field income
+              Expr
+                Num 9
+              Type: int
+        Ref: false
+        Is recursive: false
+    Print
+      MemberOf 
+        Expr
+          Var employee
+        Type: {age: int, active: bool, employed: bool, gender: int, income: int}
+          Field: gender
+  IfUnit
+    Cond
+      MemberOf 
+        Expr
+          Var employee
+        Type: {age: int, active: bool, employed: bool, gender: int, income: int}
+          Field: active
+    Body
+      Print
+        Num 1

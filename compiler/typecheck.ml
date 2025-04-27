@@ -278,8 +278,8 @@ and typecheck_expr ast types =
       in
       (match record_type with
       | Record fields ->
-        let record_type = get_field_type fields in
-        (types, record_type, MemberOf (record_ast, field, record_type))
+        let field_type = get_field_type fields in
+        (types, field_type, MemberOf (record_ast, field, record_type))
       | _ -> 
         failwith "Error: attempted to dereference field 
         on non-record type")
