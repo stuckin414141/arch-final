@@ -75,8 +75,8 @@ let rec typecheck_stmt ast (types : types * types) :
         (types, Types.Unit, Ast.IfUnit(cond_ast, body_ast))
   | Print expr ->
     let (_, expr_type, expr_ast) = typecheck_expr expr types in
-    if expr_type = Types.Unit then
-      failwith "Print expression must not return unit"
+    if expr_type <> Types.Int then
+      failwith "we can only print ints :("
     else
       (types, Types.Unit, Ast.Print(expr_ast))
   | LetStmt (var_name, var_type, init_expr, is_closure, is_recursive) ->
@@ -103,7 +103,7 @@ let rec typecheck_stmt ast (types : types * types) :
       if expr_type <> typ then
         failwith "Type of assignment does not match variable type"
       else
-        (types, Types.Unit, Ast.Assign (var_name, expr_ast))
+        (types, Types.Unit, Ast.Assign (var_name, expr_ast, expr_type))
     | None ->
       failwith ("Variable " ^ var_name ^ " assigned before declaration")
     )
@@ -147,7 +147,7 @@ and typecheck_expr ast types =
       if then_type <> else_type then
         failwith "Then and else branches of if expression must have the same type"
       else
-        (types, then_type, Ast.If(cond_ast, then_ast, else_ast))
+        (types, then_type, Ast.If(cond_ast, then_ast, else_ast, then_type))
   | Let (var_name, var_type, init_expr, body_expr, is_closure, is_recursive) ->
       let real_var_type : Types.t = convert_to_type var_type type_env in
       let updated_var_types = Symbols.SymbolTable.add var_name real_var_type var_types in
@@ -172,29 +172,28 @@ and typecheck_expr ast types =
   | BinOp (left, op, right) ->
     let (_, left_type, left_expr) = typecheck_expr left types in
     let (_, right_type, right_expr) = typecheck_expr right types in
-    let binop_ast : Ast.expr = Ast.BinOp (left_expr, op, right_expr) in
     (match op with
     | Ast.Plus | Ast.Minus | Ast.Times | Ast.Div | Ast.Mod
       | Ast.Shl | Ast.Shr | Ast.BAnd | Ast.BOr | Ast.BXor ->
       if left_type <> Types.Int || right_type <> Types.Int then
         failwith "Arithmetic operations require integer operands"
       else
-        (types, Types.Int, binop_ast)
+        (types, Types.Int, Ast.BinOp (left_expr, op, right_expr, Types.Int))
     | Ast.Leq | Ast.Geq | Ast.Lt | Ast.Gt ->
       if left_type <> Types.Int || right_type <> Types.Int then
         failwith "Comparison other than eq or neq require integers"
       else
-        (types, Types.Bool, binop_ast)
+        (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool))
     | Ast.And | Ast.Or ->
       if left_type <> Types.Bool || right_type <> Types.Bool then
         failwith "Logical operations require boolean operands"
       else
-        (types, Types.Bool, binop_ast)
+        (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool))
     | Ast.Eq | Ast.Neq   ->
       if left_type <> right_type then
         failwith "Comparison operations require operands of the same type"
       else
-        (types, Types.Bool, binop_ast))
+        (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool)))
   | Ftmlk (params, body) ->
     let param_to_ftmlk params ret = 
       List.fold_right (fun param cur_typ -> Types.Ftmlk (param, cur_typ)) params ret
@@ -257,7 +256,7 @@ and typecheck_expr ast types =
         List.map (fun (name, typ, _) -> (name, typ)) fields_info 
       in
       let field_ast = 
-        Ast.RecordExp (List.map (fun (name, _, ast) -> (name, ast)) fields_info)
+        Ast.RecordExp (List.map (fun (name, typ, ast) -> (name, ast, typ)) fields_info)
       in
       if not (is_valid_record_type fields_type) then
         failwith "Bad record type";
@@ -279,7 +278,8 @@ and typecheck_expr ast types =
       in
       (match record_type with
       | Record fields ->
-        (types, get_field_type fields, MemberOf (record_ast, field))
+        let record_type = get_field_type fields in
+        (types, record_type, MemberOf (record_ast, field, record_type))
       | _ -> 
         failwith "Error: attempted to dereference field 
         on non-record type")

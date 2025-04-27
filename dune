@@ -1,4 +1,4 @@
 (executables
-(names lexer parser typechecker)
+(names ftmlk)
 (libraries compiler)
 )

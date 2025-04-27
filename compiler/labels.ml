@@ -5,3 +5,5 @@ let new_label () =
   tempCount := l + 1;
   "L" ^ string_of_int l
 let named_label name = name
+
+let to_string t = t

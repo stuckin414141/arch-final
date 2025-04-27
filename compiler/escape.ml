@@ -19,7 +19,7 @@ let rec analysis_stmt (venv : escape_table) depth = function
   | Ast.Print expr ->
       let updated_venv = analysis_expr venv depth expr in
       updated_venv
-  | Ast.Assign (name, expr) ->
+  | Ast.Assign (name, expr, _) ->
     (match Symbols.SymbolTable.find_opt name venv with
     | Some (d, ref) ->
         if d < depth then
@@ -41,7 +41,7 @@ and
             venv
         | None -> venv)
     | Ast.Num _ -> venv
-    | Ast.If (cond, then_branch, else_branch) ->
+    | Ast.If (cond, then_branch, else_branch, _) ->
         let updated_venv = analysis_expr venv depth cond in
         let updated_venv_then = analysis_expr updated_venv depth then_branch in
         analysis_expr updated_venv_then depth else_branch
@@ -49,7 +49,7 @@ and
         let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
         let updated_venv = analysis_expr venv_with_decl depth expr in
         analysis_expr updated_venv depth body
-    | Ast.BinOp (left, _, right) ->
+    | Ast.BinOp (left, _, right, _) ->
         let updated_venv = analysis_expr venv depth left in
         analysis_expr updated_venv depth right
     | Ast.ESeq (stmt, expr) ->
@@ -66,8 +66,8 @@ and
       analysis_expr venv_after_args depth func
     | Ast.Bool _ -> venv
     | Ast.RecordExp fields ->
-        List.fold_left (fun venv (_, expr) -> analysis_expr venv depth expr) venv fields
-    | Ast.MemberOf (expr, _) ->
+        List.fold_left (fun venv (_, expr, _) -> analysis_expr venv depth expr) venv fields
+    | Ast.MemberOf (expr, _, _) ->
         let updated_venv = analysis_expr venv depth expr in
         updated_venv
 

@@ -49,5 +49,5 @@ let makeCalculator: bool->(Calculator) = ftmlk(j : bool) {
 };
 
 let calc: Calculator = makeCalculator(true);
-print(calc.add(5)(3));
-print(calc.multiply(5)(3))
+print(calc.add(5, 3));
+print(calc.multiply(5, 3))

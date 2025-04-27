@@ -1,163 +1,336 @@
-(*Fresh renamings --- this will be a map from variable names
-to the current variable name that should be used*)
+(* this should've been a functor but we only depend on two variables *)
 
-type var_symb = string * int
-type renamings = var_symb Symbols.SymbolTable.t
-
-(*List of all statements that we wish to generate*)
-let lowered_funcs  = ref []
-
-let get_fresh_naming var renamings : (var_symb * renamings) =
-  match Symbols.SymbolTable.find_opt var renamings with
-  | Some (_, cur_num) ->
-    let new_num = cur_num + 1 in
-    (var, new_num), (Symbols.SymbolTable.add var (var, new_num) renamings)
-  | None ->
-    (var, 0), (Symbols.SymbolTable.add var (var, 0) renamings)
-
-let string_of_var_symb ((str, num) : var_symb) : string = 
-  str ^ (string_of_int num)
-
-(*The argument passed in will be named env, the thing we declare
-is going to be called SL*)
-let write_closure_val depth desired_depth offset rval renamings =
-let rec go desired_depth depth (cur_sl : Mir.lval) : Mir.stmt list=
-  if desired_depth = depth then
-    let sl_loc = Regs.new_temp () in
-    let rval_temp = Regs.new_temp () in
-    Mir.(
-      [ Assign (Temp sl_loc, Operation (Lval cur_sl, Ast.Plus, Const offset));
-        Assign (Temp rval_temp, rval);
-        Store (Temp sl_loc, Lval (Temp rval_temp))]
-    )
-  else
-    let next_sl = Regs.new_temp () in
-    Mir.(
-      Assign (Temp next_sl, Deref cur_sl) ::
-      go desired_depth (depth - 1) (Temp next_sl)
-    )
-  in
-    let outer_sl : string = Symbols.SymbolTable.find "SL" renamings |> string_of_var_symb in
-    go desired_depth depth (Mir.Var outer_sl)
-
-(*First is depth, second is closure size*)
-type func = int * int
-
-(*Word size, in bytes*)
-let word_size = 8
-
-let insts (inst, _, _) = inst
-    
-let rec lower_stmt func loop_end ast renamings : (Mir.stmt list * renamings * func) =
-    let (depth, closure_offset) = func in
-    let write_closure_val = write_closure_val depth
-    in
-  match ast with
-  | Ast.While (cond, body) ->
-    let start = Labels.new_label () in
-    let end_label = Labels.new_label () in
-    let (cond_inst, cond_val, _) = 
-      lower_expr func loop_end cond renamings 
-    in
-    Mir.(
-      [MakeLabel start] @
-      cond_inst @
-      [If (cond_val, Goto end_label)] @
-      (lower_stmt func end_label body renamings |> insts) @
-      [MakeLabel end_label]
-    ), renamings, func
-  | Ast.LetStmt (var_name, _, init_expr, closure, recursive) ->
-    let (fresh_symb, updated_renamings) = 
-      get_fresh_naming var_name renamings 
-    in 
-    let (init_inst, init_val, _) = 
-      if recursive then
-        lower_expr func loop_end init_expr updated_renamings
+(* Generates a map from field name -> offset from start of record*)
+let generate_struct_layout (word_sz : int) (must_be_aligned : bool) 
+  (fields: (string * Types.t) list) : (int Symbols.SymbolTable.t * int)= 
+  let rec logic cur_off fields : int Symbols.SymbolTable.t * int = 
+    match fields with 
+    | [] -> (Symbols.SymbolTable.empty, cur_off)
+    | (name, typ) :: rest -> 
+      let get_rest_offsets next_slot = 
+        logic (cur_off + next_slot) rest
+      in
+      if must_be_aligned then
+        let rest_offsets, sz = logic (cur_off + word_sz) rest in
+        Symbols.SymbolTable.add name (cur_off) rest_offsets, sz
       else
-        lower_expr func loop_end init_expr renamings
-    in
-    let updated_closure_offset = closure_offset + word_size in
-    if !closure then
-        init_inst @ (write_closure_val depth (closure_offset) init_val renamings), 
-        updated_renamings, (depth, updated_closure_offset)
-    else
-    Mir.(
-      init_inst @
-      [Assign (Var (fresh_symb |> string_of_var_symb), init_val)]
-    ), updated_renamings, func
-  | _ -> failwith "unrecognized"
-and lower_expr func loop_end ast renamings : Mir.stmt list * Mir.rval * func = 
+        let (next_slot, cur_sz) = 
+        (match typ with
+        | Types.Bool -> 
+          (*This is the only case where we might not want to preserve alignment*)
+          (cur_off + 1, 1)
+        | __ ->
+          (*Everything else is word-sized*)
+          (cur_off / word_sz + word_sz, word_sz)
+          )
+        in
+        let (offsets, size) = get_rest_offsets next_slot in
+        offsets |> Symbols.SymbolTable.add name cur_sz,
+        size
+  in
+  logic 0 fields
+
+let get_field_type (field : string) (fields : (string * Types.t) list) = 
+  List.find (fun (s, _) -> s = field) fields |> snd  
+
+let all_mir : Mir.stmt list list ref = ref []
+
+let size_of_type (word_size : int) (typ : Types.t) = 
+  match typ with
+  | Bool -> 1
+  | _ -> word_size
+
+type types = Types.env
+
+module Renamings = struct
+  type t = int Symbols.SymbolTable.t
+
+  (*Gets current name, also returns updated naming envrionment *)
+  let get_current_name (var_name : string) (renamings : t) =
+    match (Symbols.SymbolTable.find_opt var_name renamings) with
+    | Some counter ->
+      var_name ^ (string_of_int counter), renamings
+    | _ -> (*should never happen*)
+      failwith "used variable before declaration"
+
+  (*Used when creating a variable for a new scope. Returns the 
+  new name (used within scope), along with symbol table*)
+  let create_new_name (var_name : string) (renamings : t) = 
+    match (Symbols.SymbolTable.find_opt var_name renamings) with
+    | Some counter ->
+      var_name ^ (string_of_int (counter + 1)), 
+      renamings |> Symbols.SymbolTable.add var_name (counter + 1)
+    | None ->
+      var_name ^ (string_of_int (0)),
+      renamings |> Symbols.SymbolTable.add var_name 0
+
+  let empty = Symbols.SymbolTable.empty
+end
+
+let rec stat_to_mir 
+  (must_be_aligned : bool) 
+  (word_size : int) 
+  (loop_end : Labels.t option) 
+  (renamings : Renamings.t) 
+  (ast : Ast.stmt)  = 
+  let size_of_type = size_of_type word_size in 
+  let expr_to_mir = expr_to_mir must_be_aligned word_size loop_end in
+  let reg_stm = stat_to_mir must_be_aligned word_size loop_end in
+  let new_label = Labels.new_label in
   match ast with
-  (*TODO: argument order may be wrong*)
-  | Ast.FtmlkApp (func_expr, args) ->
-    (*Function expression, then each of the arguments will be evaluated in order
-    * Non-functional programmers beware!
-    *)
-    let (func_inst, func_val, _) = 
-        lower_expr func loop_end func_expr renamings
+  | While (cond, stmt) ->
+    let (cond_insts, cond_val, cond_renamings) = expr_to_mir renamings cond in
+    let begin_label = Labels.new_label () in
+    let end_label = Labels.new_label () in
+    let stmt_insts, _ = 
+      stat_to_mir must_be_aligned word_size (Some end_label) cond_renamings stmt 
     in
-    let process_arg ((cur_inst, cur_arg_val) : Mir.stmt list * Mir.rval list) arg = 
-        let (arg_inst, arg_val, _) = 
-            lower_expr func loop_end arg renamings
-        in
-        (arg_inst @ cur_inst, arg_val :: cur_arg_val)
+    (Mir.(
+      MakeLabel begin_label ::
+      cond_insts @
+      [Goto (end_label, Some (Value cond_val))] @
+      stmt_insts @
+      [ Goto (begin_label, None);
+      MakeLabel end_label]
+    ) : Mir.stmt list), renamings
+  | LetStmt (var_name, var_typ, init_expr, _, _) ->
+    let (init_insts, init_val, _) = expr_to_mir renamings init_expr in
+    let val_size = 
+      (match var_typ with 
+        | Bool -> 1
+        | _ -> word_size
+      )
     in
-    let (init_insts, arg_vals) = 
-        List.fold_left process_arg (func_inst, []) args
+    let new_var, renamings = Renamings.create_new_name var_name renamings in
+    Mir.(
+      init_insts @
+      [Assign (Var new_var, Value init_val, val_size)]
+    ), renamings
+  | Print (expr) ->
+    let (expr_insts, expr_val, _) = expr_to_mir renamings expr in
+    Mir.(
+      expr_insts @ 
+      [Call (None, 
+            (Address (Labels.named_label "print")), 
+            [expr_val])
+      ]
+    ), renamings
+  | Assign (var_name, expr, typ) ->
+    let (expr_insts, expr_val, _) = expr_to_mir renamings expr in
+    let move_sz = size_of_type typ in 
+    let var_name, _ = Renamings.get_current_name var_name renamings in
+    Mir.(
+      expr_insts @
+      [ Assign (Var var_name, Value expr_val, move_sz)]
+    ), renamings
+  | IfUnit (cond, stmt) ->
+    let (cond_insts, cond_val, cond_renamings) = expr_to_mir renamings cond in
+    let stmt_insts, _ = reg_stm cond_renamings stmt in
+    let true_label = new_label () in
+    let end_label = new_label () in 
+    Mir.(
+      cond_insts @
+      [Goto (true_label, Some (Value cond_val)); 
+      Goto (end_label, None);
+      MakeLabel true_label] @
+      stmt_insts @ 
+      [MakeLabel end_label]
+    ), renamings
+  | Seq (stmt1, stmt2) ->
+    let (stmt1_insts, renamings) = reg_stm renamings stmt1 in
+    let (stmt2_insts, renamings) = reg_stm renamings stmt2 in
+      stmt1_insts @ stmt2_insts, renamings
+  | Break -> 
+    (match loop_end with
+    | Some loop_end ->
+      [Goto (loop_end, None)], renamings
+    | None ->
+      failwith "Attempt to break without being inside a loop")
+  | Nothing -> [], renamings
+and expr_to_mir 
+  (must_be_aligned : bool) 
+  (word_size : int) 
+  (loop_end : Labels.t option) 
+  (renamings : Renamings.t)
+  (ast : Ast.expr) 
+   = 
+  let size_of_type = size_of_type word_size in
+  let reg_etm = expr_to_mir must_be_aligned word_size loop_end in
+  let lookup = Symbols.SymbolTable.find in
+  match ast with
+  | MemberOf (expr, var, typ) ->
+    let (expr_insts, expr_val, _) = reg_etm renamings expr in
+    let fields = 
+      (match typ with
+      | Record fields -> fields
+      | _ -> failwith "Attempt to dereference non-types"
+      ) 
     in
-    let sl_rval = Mir.(Val (Lval (Var "SL"))) in
-    let res_reg = Regs.new_temp () in
-        Mir.(
-            init_insts @
-            [Call ((Some (Temp res_reg)), func_val, sl_rval :: arg_vals)]
-        ), Val (Lval (Temp res_reg)), func
-    | Ast.Ftmlk (args, body) ->
-        let insert_args renamings arg = 
-            let (_, updated_renamings) = 
-                get_fresh_naming arg renamings
-            in
-                updated_renamings
-        in
-        (*We insert the environment argument*)
-        let args = ("env", Types.Unit, ref false) :: args in
-        let func_renaming_env = 
-            let get_arg_name (s, _, _) = s in
-            List.fold_left insert_args renamings (List.map get_arg_name args)
-        in
-        let (depth, _) = func in
-        let (lowered_body, func_val, _) = 
-            lower_expr (depth+1, word_size) "" body func_renaming_env
-        in
-        let func_address = 
-            Labels.new_label ()
-        in
-        let full_body = 
-            let func_sl = 
-                Symbols.SymbolTable.find "SL" func_renaming_env in
-            let func_env = 
-                Symbols.SymbolTable.find "env" func_renaming_env in
-            Mir.(
-                [Mir.MakeLabel func_address;
-                (*TODO: external_call to allocate memory for the static link*)
-                Store (Var (func_sl |> string_of_var_symb), 
-                Lval (Var (func_env |> string_of_var_symb)))] @
-                lowered_body @
-                [Mir.Return func_val]
-            )
-        in
-        lowered_funcs := full_body :: !lowered_funcs;
-        let closure_ptr = Regs.new_temp () in
-        let env_slot = Regs.new_temp () in
-        let make_func_val = 
-        Mir.(
-            [
-                (*TODO: allocate closure*)
-                Store (Temp closure_ptr, Address func_address);
-                Assign (Temp env_slot, 
-                    Operation (Lval (Temp closure_ptr), Ast.Plus, Const 8));
-                Store (Temp env_slot, Lval (Var "SL"))
-            ]
+    let offset = 
+      generate_struct_layout word_size must_be_aligned fields 
+      |> fst
+      |> Symbols.SymbolTable.find var
+    in
+    let res = Regs.new_temp () in
+    let calculate_address = 
+      Mir.(Operation (expr_val, Plus, Const offset))
+    in
+    let size_of_type = 
+      get_field_type var fields |> size_of_type
+    in
+    Mir.(
+      expr_insts @ 
+      [AssignDeref (Temp res, calculate_address, size_of_type)]
+    ), Lval (Temp res), renamings
+  | Var var ->
+    let var, _ = Renamings.get_current_name var renamings in
+    [], (Lval (Var (var))), renamings
+  | Num int -> 
+    [], (Const int), renamings
+  | Bool b -> 
+    [], 
+    (*May change in future*)
+    (if b then 
+      (Const 1)
+    else
+      (Const 0)),
+    renamings
+  | RecordExp fields ->
+    let res = Regs.new_temp () in
+    let offsets, sz = 
+      fields
+      |> List.map (fun (name, _, typ) -> (name, typ))
+      |> generate_struct_layout word_size true 
+    in
+    let alloc_mem : Mir.stmt = 
+      Call (
+        Some (Temp res),
+        (Address (Labels.named_label "gib_mem")),
+        [(Const sz)]
         )
-        in
-        make_func_val, Val (Lval ( Temp closure_ptr)), func
-  | _ -> failwith "unrecognized"
+    in
+    let initialize_fields = 
+      let rec logic fields : Mir.stmt list= 
+        (match fields with
+        | (field_name, expr, typ) :: rest -> 
+          let (expr_insts, expr_val, _) = reg_etm renamings expr in
+          let field_offset = lookup field_name offsets in
+          let field_addr = 
+            Mir.Operation (Lval (Temp res), Plus, Const field_offset) 
+          in
+          expr_insts @
+          [Mir.Store (field_addr, Value expr_val, size_of_type typ)] @
+          logic rest
+        | [] -> [])
+      in
+        logic fields
+    in
+    alloc_mem :: initialize_fields, Lval (Temp res), renamings
+  | If (cond, then_expr, else_expr, typ) ->
+    let result_reg = Regs.new_temp () in
+    let (cond_insts, cond_val, cond_renamings) = reg_etm renamings cond in
+    let (then_insts, then_val, _) = reg_etm cond_renamings then_expr in
+    let (else_insts, else_val, _) = reg_etm cond_renamings else_expr in
+    let then_label = Labels.new_label () in
+    let else_label = Labels.new_label () in
+    let end_label = Labels.new_label () in
+    cond_insts @
+    Mir.([Goto (then_label, Some (Value (cond_val))); 
+    Goto (else_label, None)] @ 
+    then_insts @
+    [
+      Assign (Temp result_reg, Value then_val, size_of_type typ);
+      Goto (end_label, None)
+    ] @
+    else_insts @
+    [ Assign (Temp result_reg, Value else_val, size_of_type typ);
+      MakeLabel end_label]), Lval (Temp result_reg), renamings
+  | Let (var_name, var_typ, init_expr, body_expr, _, _) ->
+    let var_name, body_renamings = 
+      Renamings.create_new_name var_name renamings 
+    in
+    let (init_insts, init_val, _) = 
+      reg_etm renamings init_expr
+    in
+    let (body_insts, body_val, _) = 
+      reg_etm body_renamings body_expr
+    in
+      init_insts @
+      [Mir.Assign (Var var_name, (Value init_val), size_of_type var_typ)] @
+      body_insts, body_val, renamings
+  | BinOp (left_expr, op, right_expr, typ) ->
+    let (left_insts, left_val, _) = reg_etm renamings left_expr in
+    let (right_insts, right_val, _) = reg_etm renamings right_expr in
+    let result = Regs.new_temp () in
+    left_insts @
+    right_insts @
+    [Mir.Assign (Temp result, Operation (left_val, op, right_val), size_of_type typ)],
+    (Lval (Temp result)),
+    renamings
+  | ESeq (stmt, expr) ->
+    let (stmt_insts, stmt_renamings) = 
+      stat_to_mir must_be_aligned word_size loop_end renamings stmt
+    in
+    let (expr_insts, expr_val, _) = reg_etm stmt_renamings expr in
+    stmt_insts @ expr_insts, expr_val, renamings
+  | Ftmlk (args, body) ->
+    let func_addr = 
+      ftmlk_to_mir must_be_aligned word_size args body None
+    in
+    ([], func_addr, renamings)
+  | FtmlkApp (func, args) ->
+    let process_args (arg_insts, arg_vals) arg = 
+      let (arg_inst, arg_val, _) = reg_etm renamings arg in
+      (arg_insts @ arg_inst, arg_vals @ [arg_val])
+    in
+    let 
+      (arg_insts, arg_vals) = List.fold_left process_args ([], []) args
+    in
+    let result = Regs.new_temp () in
+    let (func_insts, func_val, _) = reg_etm renamings func in
+    Mir.(
+      arg_insts @
+      func_insts @
+      [Call ((Some (Temp result)), func_val, arg_vals)]
+    ), Lval (Temp result), renamings
+
+and ftmlk_to_mir 
+  (must_be_aligned : bool) 
+  (word_size : int) 
+  (args : (string * Types.t * bool ref) list)
+  (body : Ast.expr)
+  (func_name : string option) =
+  (*At this point there should be no closures. All
+  accesses to variables from enclosing functions will go through
+  the static link*)
+  let process_args ((insts : Mir.stmt list), (renamings : Renamings.t) )
+    ((var_name, _, _) : string * Types.t * bool ref) = 
+    let var_name, renamings = Renamings.create_new_name var_name renamings in
+    (insts @ [Mir.Arg var_name], renamings)
+  in
+  let func_label = Labels.new_label () in
+  let (arg_insts, func_renamings) = 
+    let (arg_insts, arg_renamings) = 
+      List.fold_left process_args ([], Renamings.empty) args
+    in
+    match func_name with
+    | Some func_name ->
+      let (func_name, func_renamings) =
+        Renamings.create_new_name func_name arg_renamings
+      in
+        Mir.(Assign (Var func_name, Value (Address func_label), word_size)) ::
+        arg_insts, func_renamings
+    | None -> 
+      (arg_insts, arg_renamings)
+  in
+  let (func_body, func_val, _) = 
+    expr_to_mir must_be_aligned word_size None func_renamings body
+  in
+  let func_insts = 
+    Mir.MakeLabel func_label ::
+    arg_insts @ 
+    func_body @
+    [Mir.Return func_val]
+  in
+  all_mir := func_insts :: !all_mir;
+  (Mir.Address func_label)

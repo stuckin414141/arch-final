@@ -1,4 +1,4 @@
-type lval = 
+type lval =
   | Var of string
   | Temp of Regs.t
 
@@ -7,20 +7,27 @@ type value =
   | Const of int
   | Address of Labels.t
 
-type rval = 
+type expr = 
   | Operation of value * Ast.ast_binop * value
-  | Deref of lval
-  | Val of value
+  | Value of value
 
 
+(*Int fields at the end are size values*)
 type stmt = 
-  (*Only works with bool --> don't need types*)
-  | If of rval * stmt
-  | Goto of Labels.t
-  | Assign of lval * rval
-  (*Stores at the memory location referred to by lval*)
-  | Store of lval * value 
+  (*We assign a variable name to be an argument*)
+  | Arg of string
+  (*The conditional jump*)
+  | Goto of Labels.t * expr option
+  | Assign of lval * expr * int
+  (*
+    lval = *<expr>
+  *)
+  | AssignDeref of lval * expr * int
+  (*
+    *<expr> = <expr>
+  *)
+  | Store of expr * expr * int
   (*Thing to store the value in, location of function, arguments*)
-  | Call of lval option * rval * rval list
+  | Call of lval option * value * value list
   | MakeLabel of Labels.t
-  | Return of rval
+  | Return of value
