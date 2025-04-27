@@ -1,0 +1,107 @@
+Seq
+  Seq
+    Seq
+      Seq
+        Seq
+          Seq
+            Seq
+              Nothing
+              Nothing
+            LetStmt origin
+              type: {x: int, y: int}
+              Expr
+                RecordExp
+                  Field x
+                    Expr
+                      Num 0
+                    Type: int
+                  Field y
+                    Expr
+                      Num 0
+                    Type: int
+              Ref: false
+              Is recursive: false
+          LetStmt A
+            type: {x: int, y: int}
+            Expr
+              RecordExp
+                Field x
+                  Expr
+                    Num 0
+                  Type: int
+                Field y
+                  Expr
+                    Num 1
+                  Type: int
+            Ref: false
+            Is recursive: false
+        LetStmt B
+          type: {x: int, y: int}
+          Expr
+            RecordExp
+              Field x
+                Expr
+                  Num 1
+                Type: int
+              Field y
+                Expr
+                  Num 0
+                Type: int
+          Ref: false
+          Is recursive: false
+      LetStmt unit_triangle
+        type: {first: {x: int, y: int}, second: {x: int, y: int}, third: {x: int, y: int}}
+        Expr
+          RecordExp
+            Field first
+              Expr
+                Var origin
+              Type: {x: int, y: int}
+            Field second
+              Expr
+                Var A
+              Type: {x: int, y: int}
+            Field third
+              Expr
+                Var B
+              Type: {x: int, y: int}
+        Ref: false
+        Is recursive: false
+    LetStmt area
+      type: ({first: {x: int, y: int}, second: {x: int, y: int}, third: {x: int, y: int}})->(int)
+      Expr
+        Ftmlk
+          Args
+            t : {first: {x: int, y: int}, second: {x: int, y: int}, third: {x: int, y: int}}
+              Ref: false
+          Body
+            BinOp +
+              Left
+                MemberOf 
+                  Expr
+                    MemberOf 
+                      Expr
+                        Var t
+                      Type: {x: int, y: int}
+                        Field: first
+                  Type: int
+                    Field: x
+              Right
+                MemberOf 
+                  Expr
+                    MemberOf 
+                      Expr
+                        Var t
+                      Type: {x: int, y: int}
+                        Field: second
+                  Type: int
+                    Field: y
+              Type: int
+      Ref: false
+      Is recursive: false
+  Print
+    FtmlkApp
+      Func
+        Var area
+      Args
+        Var unit_triangle

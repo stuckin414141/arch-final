@@ -12,5 +12,4 @@
 
 (library
 (name compiler)
-(libraries regular graphlib)
 )

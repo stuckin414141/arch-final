@@ -3,6 +3,53 @@
 (* Helper function for indentation *)
 let indent_str n = String.make n ' '
 
+let string_of_token = function
+  | Grammar.EOF -> "EOF"
+  | Grammar.ID id -> "ID(" ^ id ^ ")"
+  | Grammar.NUM n -> "NUM(" ^ string_of_int n ^ ")"
+  | Grammar.COMMA -> "COMMA"
+  | Grammar.COLON -> "COLON" 
+  | Grammar.SEMICOLON -> "SEMICOLON"
+  | Grammar.LPAREN -> "LPAREN"
+  | Grammar.RPAREN -> "RPAREN"
+  | Grammar.LBRACE -> "LBRACE"
+  | Grammar.RBRACE -> "RBRACE"
+  | Grammar.PLUS -> "PLUS"
+  | Grammar.MINUS -> "MINUS"
+  | Grammar.TIMES -> "TIMES"
+  | Grammar.DIVIDE -> "DIVIDE"
+  | Grammar.EQ -> "EQ"
+  | Grammar.NEQ -> "NEQ"
+  | Grammar.LT -> "LT"
+  | Grammar.LE -> "LE"
+  | Grammar.GT -> "GT"
+  | Grammar.GE -> "GE"
+  | Grammar.BOR -> "BOR"
+  | Grammar.BAND -> "BAND"
+  | Grammar.BXOR -> "BXOR"
+  | Grammar.SHL -> "SHL"
+  | Grammar.SHR -> "SHR"
+  | Grammar.AND -> "AND"
+  | Grammar.OR -> "OR"
+  | Grammar.ASSIGN -> "ASSIGN"
+  | Grammar.IF -> "IF"
+  | Grammar.THEN -> "THEN"
+  | Grammar.ELSE -> "ELSE"
+  | Grammar.WHILE -> "WHILE"
+  | Grammar.LET -> "LET"
+  | Grammar.IN -> "IN"
+  | Grammar.TYPE -> "TYPE"
+  | Grammar.DOT -> "DOT"
+  | Grammar.BREAK -> "BREAK"
+  | Grammar.REC -> "REC"
+  | Grammar.TRUE -> "TRUE"
+  | Grammar.FALSE -> "FALSE"
+  | Grammar.FTMLK -> "FTMLK"
+  | Grammar.MODULO -> "MODULO"
+  | Grammar.PRINT -> "PRINT"
+  | Grammar.ARROW -> "ARROW"
+
+
 (* Binary operator string conversion *)
 let string_of_binop : Ast.ast_binop -> string = function 
   | Ast.Plus  -> "+"
@@ -178,9 +225,10 @@ and string_of_untyped_expr depth = function
       String.concat "" fields_strs
   | Untyped_ast.MemberOf (expr, field) ->
       let indentation = indent_str depth in
-      indentation ^ "MemberOf " ^ field ^ "\n" ^
+      indentation ^ "MemberOf " ^ "\n" ^
       indentation ^ "  Expr\n" ^
-      string_of_untyped_expr (depth + 4) expr
+      string_of_untyped_expr (depth + 4) expr ^
+  indentation ^ " field: " ^ field ^ "\n"
 
 (* Entry point function for untyped AST *)
 let string_of_untyped_ast stmt =
@@ -306,10 +354,11 @@ and string_of_ast_expr depth = function
       String.concat "" fields_strs
   | Ast.MemberOf (expr, field, typ) ->
       let indentation = indent_str depth in
-      indentation ^ "MemberOf " ^ field ^ "\n" ^
+      indentation ^ "MemberOf " ^ "\n" ^
       indentation ^ "  Expr\n" ^
       string_of_ast_expr (depth + 4) expr ^
-      indentation ^ "  Type: " ^ string_of_type typ ^ "\n"
+      indentation ^ "  Type: " ^ string_of_type typ ^ "\n" ^
+      indent_str (depth + 4) ^ "Field: " ^ field ^ "\n"
 
 (* Entry point function for typed AST *)
 let string_of_ast stmt =

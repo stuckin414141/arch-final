@@ -1,10 +1,13 @@
 
 ## Things to do
-- fix Util to print types along with AST
 - modify debugging pipeline to print to files along with the pipeline
+    - add dune/build options to only build lexer/parser/typechecker/etc.
+    - also make testing infra better
+- do a fuck ton of testing of everything
+    - we now have to test parsing :(
+        - dot in particular
 
 lower to MIR
-- theoretically, recursion is done through static links
     - logic for recursion is available
         - in let statements you open the initialize expression up by one level to see
             if it's a function. If it is, then do recursion

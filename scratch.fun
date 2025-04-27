@@ -1,1 +1,4 @@
-let x : int = 2
+while true {
+    print(1);
+}
+

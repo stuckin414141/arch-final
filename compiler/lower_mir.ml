@@ -70,7 +70,7 @@ end
 let rec stat_to_mir 
   (must_be_aligned : bool) 
   (word_size : int) 
-  (loop_end : Labels.t option) 
+  (loop_end : Labels.t option)  
   (renamings : Renamings.t) 
   (ast : Ast.stmt)  = 
   let size_of_type = size_of_type word_size in 

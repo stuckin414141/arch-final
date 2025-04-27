@@ -36,6 +36,7 @@
 %left PLUS MINUS
 %left TIMES DIVIDE MODULO
 %nonassoc LPAREN
+%left DOT
 %right ARROW
 
 %%

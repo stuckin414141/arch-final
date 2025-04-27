@@ -3,35 +3,36 @@ if 5 > 3 {
     print(1)
 };
 
-// Test if-then-else
-let z : int = 
-    if 5 > 10 then 
-        10
-    else 
-        20;
-
-// Test nested if expressions
+// Basic pathology
 let x: int = 
     if 5 > 3 then 
-        if 2 < 1 then 
-            100 
+        if 1 < 2 then 
+            let x : int = 4 in
+            while x < 15 {
+                x := x * x
+            };
+            x
         else 
             200
     else 
         300;
 print(x);
 
-// Test while loops
-let count: int = 0;
-while count < 5 {
-  print(count);
-  count := count + 1
-};
-
 // Test break
 let i: int = 0;
 while i < 10 {
-  if i > 5 { break };
+  if i > 5 { 
+    break 
+    };
   print(i);
-  i := i + 1
+  i := i + 1;
 }
+
+let is_the_counter_up_to_date : int -> bool = 
+    ftmlk (counter : int) {
+         counter == 0 
+    };
+
+if (let h : bool = is_the_counter_up_to_date (0); h) {
+    print(1)
+} 

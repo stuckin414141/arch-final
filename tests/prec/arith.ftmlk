@@ -1,0 +1,17 @@
+// Test arithmetic operator precedence
+// Multiplication and division have higher precedence than addition/subtraction
+let a1: int = 3 + 4 * 5;       // Should be 23, not 35
+let a2: int = 10 - 6 / 2;      // Should be 7, not 2
+let a3: int = (3 + 4) * 5;     // Should be 35
+let a4: int = 10 - (6 / 2);    // Should be 7 (same as a2, showing parentheses)
+let a5: int = 2 * 3 + 4 * 5;   // Should be 26
+let a6: int = 20 / 4 / 5;      // Should be 1 (left associative)
+let a7: int = 3 * 4 % 5;       // Should be 12 % 5 = 2 (% same precedence as *)
+
+print(a1);
+print(a2);
+print(a3);
+print(a4);
+print(a5);
+print(a6);
+print(a7)

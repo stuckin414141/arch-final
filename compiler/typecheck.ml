@@ -75,7 +75,7 @@ let rec typecheck_stmt ast (types : types * types) :
         (types, Types.Unit, Ast.IfUnit(cond_ast, body_ast))
   | Print expr ->
     let (_, expr_type, expr_ast) = typecheck_expr expr types in
-    if expr_type <> Types.Int then
+    if expr_type <> Types.Int && expr_type <> Types.Bool then
       failwith "we can only print ints :("
     else
       (types, Types.Unit, Ast.Print(expr_ast))
