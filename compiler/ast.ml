@@ -25,7 +25,7 @@ type stmt =
   | While of expr * stmt
   | LetStmt of string * Types.t * expr * bool ref * bool
   | Print of expr
-  | Assign of string * expr * Types.t
+  | Assign of expr * expr * Types.t
   | IfUnit of expr * stmt
   | Seq of stmt * stmt
   | Break
@@ -41,7 +41,7 @@ and
   | RecordExp of (string * expr * Types.t) list
   | If of expr * expr * expr * Types.t
   | Let of string * Types.t * expr * expr * bool ref * bool
-  | BinOp of expr * ast_binop * expr * Types.t
+  | BinOp of expr * Binops.t * expr * Types.t
   | ESeq of stmt * expr
   | Ftmlk of (string * Types.t * bool ref) list * expr
   | FtmlkApp of expr * expr list

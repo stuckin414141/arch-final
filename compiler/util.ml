@@ -51,25 +51,25 @@ let string_of_token = function
 
 
 (* Binary operator string conversion *)
-let string_of_binop : Ast.ast_binop -> string = function 
-  | Ast.Plus  -> "+"
-  | Ast.Minus -> "-"
-  | Ast.Times -> "*"
-  | Ast.Div   -> "/"
-  | Ast.Mod   -> "%"
-  | Ast.And   -> "&&"
-  | Ast.Or    -> "||"
-  | Ast.Eq    -> "=="
-  | Ast.Neq   -> "!="
-  | Ast.Lt    -> "<"
-  | Ast.Gt    -> ">"
-  | Ast.Leq   -> "<="
-  | Ast.Geq   -> ">="
-  | Ast.Shl   -> "<<"
-  | Ast.Shr   -> ">>"
-  | Ast.BAnd  -> "&"
-  | Ast.BOr   -> "|"
-  | Ast.BXor  -> "^"
+let string_of_binop : Binops.t -> string = function 
+  | Binops.Plus  -> "+"
+  | Binops.Minus -> "-"
+  | Binops.Times -> "*"
+  | Binops.Div   -> "/"
+  | Binops.Mod   -> "%"
+  | Binops.And   -> "&&"
+  | Binops.Or    -> "||"
+  | Binops.Eq    -> "=="
+  | Binops.Neq   -> "!="
+  | Binops.Lt    -> "<"
+  | Binops.Gt    -> ">"
+  | Binops.Leq   -> "<="
+  | Binops.Geq   -> ">="
+  | Binops.Shl   -> "<<"
+  | Binops.Shr   -> ">>"
+  | Binops.BAnd  -> "&"
+  | Binops.BOr   -> "|"
+  | Binops.BXor  -> "^"
 
 (* Type to string conversion *)
 let rec string_of_type : Types.t -> string = function
@@ -131,9 +131,11 @@ let rec string_of_untyped_stmt depth = function
       let indentation = indent_str depth in
       indentation ^ "Print\n" ^
       string_of_untyped_expr (depth + 2) expr
-  | Untyped_ast.Assign (name, expr) ->
+  | Untyped_ast.Assign (target, expr) ->
       let indentation = indent_str depth in
-      indentation ^ "Assign " ^ name ^ "\n" ^
+      indentation ^ "Assign \n " ^ 
+      indentation ^ "Target\n " ^ 
+      (string_of_untyped_expr (depth + 4) target) ^ "\n" ^
       indentation ^ "  Expr\n" ^
       string_of_untyped_expr (depth + 4) expr
   | Untyped_ast.IfUnit (cond, body) ->
@@ -261,9 +263,11 @@ let rec string_of_ast_stmt depth = function
       let indentation = indent_str depth in
       indentation ^ "Print\n" ^
       string_of_ast_expr (depth + 2) expr
-  | Ast.Assign (name, expr, typ) ->
+  | Ast.Assign (target, expr, typ) ->
       let indentation = indent_str depth in
-      indentation ^ "Assign " ^ name ^ "\n" ^
+      indentation ^ "Assign\n" ^
+      indentation ^ " Target\n" ^
+      string_of_ast_expr (depth + 4) target ^
       indentation ^ "  Expr\n" ^
       string_of_ast_expr (depth + 4) expr ^
       indentation ^ "  Type: " ^ string_of_type typ ^ "\n"

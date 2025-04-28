@@ -33,3 +33,7 @@ let yourefired : Person -> Person =
 let tyrell : boss = {fire = yourefired; level = 10};
 let sad : Person = tyrell.fire(employee);
 print(sad.income);
+
+//lets do some writes
+sad.income := 33333;
+print(sad.income)

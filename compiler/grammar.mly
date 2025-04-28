@@ -51,14 +51,13 @@ stmt:
     | LET REC ID COLON type_parse EQ expr { LetStmt ($3, $5, $7, ref false, true)}
     | stmt SEMICOLON stmt {Seq($1, $3)}
     | WHILE expr LBRACE stmt RBRACE {While($2, $4)}
-    | ID ASSIGN expr {Assign($1, $3)}
+    | lvalue ASSIGN expr {Assign($1, $3)}
     | IF expr LBRACE stmt RBRACE { IfUnit($2, $4) }
     | TYPE ID EQ type_parse { TypeDecl ($2, $4)}
     | BREAK { Break }
 expr:
     | LPAREN expr RPAREN { $2 }
-    | ID { Var($1) }
-    | expr DOT ID {MemberOf ($1, $3)}
+    | lvalue { $1 }
     | TRUE { Bool(true) }
     | FALSE { Bool(false) }
     | expr LPAREN exprlist RPAREN { FtmlkApp($1, $3) }
@@ -87,7 +86,11 @@ expr:
     | stmt SEMICOLON expr { ESeq($1, $3) }
     | LBRACE fieldlist RBRACE { RecordExp ($2) }
     | FTMLK LPAREN decllist RPAREN LBRACE expr RBRACE 
-        { Ftmlk ($3, $6)}    
+        { Ftmlk ($3, $6)} 
+
+lvalue:
+    | ID { Var($1) }
+    | expr DOT ID {MemberOf ($1, $3)}
 
 decllist:
     | { [] }

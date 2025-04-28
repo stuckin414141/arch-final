@@ -41,6 +41,8 @@ let rec check_valid_type_decl (type_name : string)
       if type_name = str then false
       else true
 
+
+
 (*first part of types is for variables fyi*)
 let rec typecheck_stmt ast (types : types * types) : 
 (types * types) * Types.t * Ast.stmt = 
@@ -96,17 +98,13 @@ let rec typecheck_stmt ast (types : types * types) :
       else
         ((updated_vars, type_env), Types.Unit, 
         Ast.LetStmt (var_name, real_type, init_expr, is_closure, is_recursive))
-  | Assign (var_name, expr) ->
-    (match lookup var_name var_types with
-    | Some typ ->
-      let (_, expr_type, expr_ast) = typecheck_expr expr types in
-      if expr_type <> typ then
-        failwith "Type of assignment does not match variable type"
-      else
-        (types, Types.Unit, Ast.Assign (var_name, expr_ast, expr_type))
-    | None ->
-      failwith ("Variable " ^ var_name ^ " assigned before declaration")
-    )
+  | Assign (target, expr) ->
+    let (_, target_typ, target_ast) = typecheck_expr target types in
+    let (_, expr_typ, expr_ast) = typecheck_expr expr types in
+    if target_typ <> expr_typ then 
+      failwith "Types in assign statement must match"
+    else
+      (types, Types.Unit, Assign (target_ast, expr_ast, expr_typ))
   | Seq (stmt1, stmt2) ->
     let check_unit_and_propogate stmt types = 
         let (types, typ, stmt_ast) = typecheck_stmt stmt types in
@@ -173,23 +171,23 @@ and typecheck_expr ast types =
     let (_, left_type, left_expr) = typecheck_expr left types in
     let (_, right_type, right_expr) = typecheck_expr right types in
     (match op with
-    | Ast.Plus | Ast.Minus | Ast.Times | Ast.Div | Ast.Mod
-      | Ast.Shl | Ast.Shr | Ast.BAnd | Ast.BOr | Ast.BXor ->
+    | Binops.Plus | Binops.Minus | Binops.Times | Binops.Div | Binops.Mod
+      | Binops.Shl | Binops.Shr | Binops.BAnd | Binops.BOr | Binops.BXor ->
       if left_type <> Types.Int || right_type <> Types.Int then
         failwith "Arithmetic operations require integer operands"
       else
         (types, Types.Int, Ast.BinOp (left_expr, op, right_expr, Types.Int))
-    | Ast.Leq | Ast.Geq | Ast.Lt | Ast.Gt ->
+    | Binops.Leq | Binops.Geq | Binops.Lt | Binops.Gt ->
       if left_type <> Types.Int || right_type <> Types.Int then
         failwith "Comparison other than eq or neq require integers"
       else
         (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool))
-    | Ast.And | Ast.Or ->
+    | Binops.And | Binops.Or ->
       if left_type <> Types.Bool || right_type <> Types.Bool then
         failwith "Logical operations require boolean operands"
       else
         (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool))
-    | Ast.Eq | Ast.Neq   ->
+    | Binops.Eq | Binops.Neq   ->
       if left_type <> right_type then
         failwith "Comparison operations require operands of the same type"
       else
@@ -263,26 +261,28 @@ and typecheck_expr ast types =
       (types, Record fields_type, field_ast)
   | MemberOf (record, field) ->
       let (_, record_type, record_ast) = typecheck_expr record types in
-      let get_field_type fields = 
-        let matching_fields = 
-          List.filter (fun (s, _) -> if s = field then true else false)
-          fields 
-        in
-          (match matching_fields with
-          | [] -> 
-            failwith ("Error: field " ^ field ^ " not found in 
-            record type " ^ (Util.string_of_type record_type))
-          | (_, t) :: [] -> t
-          | _ -> failwith "Too many records of same name"
-          )
-      in
       (match record_type with
       | Record fields ->
+        let get_field_type fields = 
+            let matching_fields = 
+                List.filter (fun (s, _) -> if s = field then true else false)
+                fields 
+              in
+                (match matching_fields with
+                | [] -> 
+                  failwith ("Error: field " ^ field ^ " not found in 
+                  record type " ^ (Util.string_of_type record_type))
+                | (_, t) :: [] -> t
+                | _ -> failwith "Too many records of same name"
+                )
+                in
         let field_type = get_field_type fields in
         (types, field_type, MemberOf (record_ast, field, record_type))
       | _ -> 
         failwith "Error: attempted to dereference field 
         on non-record type")
+
+
 let analyze ast = 
   let initial_var_types = Symbols.SymbolTable.empty in
   typecheck_stmt ast (initial_var_types, Types.env)

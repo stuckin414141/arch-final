@@ -11,7 +11,7 @@ type stmt =
   | While of expr * stmt
   | LetStmt of string * type_placeholder * expr * bool ref * bool
   | Print of expr
-  | Assign of string * expr
+  | Assign of expr * expr
   | IfUnit of expr * stmt
   | Seq of stmt * stmt
   | TypeDecl of string * type_placeholder
@@ -27,7 +27,7 @@ and
   | RecordExp of (string * expr) list
   | If of expr * expr * expr
   | Let of string * type_placeholder * expr * expr * bool ref * bool
-  | BinOp of expr * Ast.ast_binop * expr
+  | BinOp of expr * Binops.t * expr
   | ESeq of stmt * expr
   | Ftmlk of (string * type_placeholder * bool ref) list * expr
   | FtmlkApp of expr * expr list

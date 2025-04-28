@@ -39,6 +39,17 @@ let generate_struct_layout (word_sz : int) (must_be_aligned : bool)
 let get_field_type (field : string) (fields : (string * Types.t) list) = 
   List.find (fun (s, _) -> s = field) fields |> snd  
 
+let get_offset_of_field  (word_sz : int) (must_be_aligned : bool) 
+(record_type : Types.t) (field_name : string) : int = 
+  match record_type with 
+  | Record fields ->
+    let layout, _ = 
+      generate_struct_layout word_sz must_be_aligned fields
+    in
+    Symbols.SymbolTable.find field_name layout
+  | _ -> failwith "Not a record type"
+
+
 let all_mir : Mir.stmt list list ref = ref []
 
 let size_of_type (word_size : int) (typ : Types.t) = 
@@ -148,14 +159,33 @@ let rec stat_to_mir
             [expr_val])
       ]
     ), renamings
-  | Assign (var_name, expr, typ) ->
+  | Assign (target, expr, typ) ->
     let (expr_insts, expr_val, _) = expr_to_mir renamings expr in
     let move_sz = size_of_type typ in 
-    let var_name, _ = Renamings.get_current_name var_name renamings in
-    Mir.(
-      expr_insts @
-      [ Assign (Var var_name, Value expr_val, move_sz)]
-    ), renamings
+    let insts = (match target with 
+    | Var var_name -> 
+      let cur_name, _ = Renamings.get_current_name var_name renamings in
+      Mir.(
+        expr_insts @
+        [ Assign (Var cur_name, Value expr_val, move_sz)])
+    | MemberOf (record, field_name, record_typ) ->
+      let (record_insts, record_val, _) = expr_to_mir renamings record in
+      let field_offset = 
+        get_offset_of_field word_size must_be_aligned record_typ field_name 
+      in
+      let addr_of_field : Mir.expr = 
+        Operation (record_val, Plus, Const field_offset)
+      in
+      Mir.(
+        record_insts @
+        (*TODO: this may cause undue interference*)
+        expr_insts @
+        [ Store (addr_of_field, Value expr_val, move_sz)]
+      )
+    | _ -> failwith "Attempt to assign to invalid type"
+    )
+    in
+    insts, renamings
   | IfUnit (cond, stmt) ->
     let (cond_insts, cond_val, cond_renamings) = expr_to_mir renamings cond in
     let stmt_insts, _ = reg_stm cond_renamings stmt in

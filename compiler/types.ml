@@ -14,3 +14,4 @@ let env = Symbols.SymbolTable.empty |>
   u "bool" Bool |>
   u "int" Int |>
   u "unit" Unit 
+

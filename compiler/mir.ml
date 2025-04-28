@@ -8,7 +8,7 @@ type value =
   | Address of Labels.t
 
 type expr = 
-  | Operation of value * Ast.ast_binop * value
+  | Operation of value * Binops.t * value
   | Not of value
   | Value of value
 

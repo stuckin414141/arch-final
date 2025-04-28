@@ -1,0 +1,19 @@
+type t = 
+| Plus
+| Minus
+| Times
+| Div
+| Mod
+| And
+| Or
+| Eq
+| Neq
+| Lt
+| Gt
+| Leq
+| Geq
+| Shl
+| Shr
+| BAnd
+| BOr
+| BXor

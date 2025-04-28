@@ -56,39 +56,39 @@ let is_reserved_func (value : Mir.value) : reserved_func =
 
 (*Written by claude. *)
 (* Evaluates a binary operation on two integer values *)
-let eval_binop (left: int) (op: Ast.ast_binop) (right: int) : int =
+let eval_binop (left: int) (op: Binops.t) (right: int) : int =
   match op with
   (* Arithmetic operations *)
-  | Ast.Plus -> left + right
-  | Ast.Minus -> left - right
-  | Ast.Times -> left * right
-  | Ast.Div -> 
+  | Binops.Plus -> left + right
+  | Binops.Minus -> left - right
+  | Binops.Times -> left * right
+  | Binops.Div -> 
       if right = 0 then failwith "Division by zero"
       else left / right
-  | Ast.Mod -> 
+  | Binops.Mod -> 
       if right = 0 then failwith "Modulo by zero"
       else left mod right
   
   (* Logical operations - treating 0 as false, non-zero as true *)
-  | Ast.And -> 
+  | Binops.And -> 
       if left <> 0 && right <> 0 then 1 else 0
-  | Ast.Or -> 
+  | Binops.Or -> 
       if left <> 0 || right <> 0 then 1 else 0
   
   (* Comparison operations *)
-  | Ast.Eq -> if left = right then 1 else 0
-  | Ast.Neq -> if left <> right then 1 else 0
-  | Ast.Lt -> if left < right then 1 else 0
-  | Ast.Gt -> if left > right then 1 else 0
-  | Ast.Leq -> if left <= right then 1 else 0
-  | Ast.Geq -> if left >= right then 1 else 0
+  | Binops.Eq -> if left = right then 1 else 0
+  | Binops.Neq -> if left <> right then 1 else 0
+  | Binops.Lt -> if left < right then 1 else 0
+  | Binops.Gt -> if left > right then 1 else 0
+  | Binops.Leq -> if left <= right then 1 else 0
+  | Binops.Geq -> if left >= right then 1 else 0
   
   (* Bitwise operations *)
-  | Ast.Shl -> left lsl right
-  | Ast.Shr -> left lsr right
-  | Ast.BAnd -> left land right
-  | Ast.BOr -> left lor right
-  | Ast.BXor -> left lxor right
+  | Binops.Shl -> left lsl right
+  | Binops.Shr -> left lsr right
+  | Binops.BAnd -> left land right
+  | Binops.BOr -> left lor right
+  | Binops.BXor -> left lxor right
 
 let get_block_label (stmts : Mir.stmt list) : Labels.t = 
   match stmts with
