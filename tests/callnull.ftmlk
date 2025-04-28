@@ -1,0 +1,4 @@
+// whoa, we can segfault!
+
+let boom : int -> int = nullptr;
+let f : int = boom(3);

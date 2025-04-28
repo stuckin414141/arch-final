@@ -33,6 +33,7 @@ rule token = parse
 | "let" {LET}
 | "rec" {REC}
 | "in" {IN}
+| "nullptr" {NULLPTR}
 | ":=" {ASSIGN}
 | "!=" {NEQ}
 | "==" {EQ}

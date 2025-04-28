@@ -1,6 +1,9 @@
 
 ## Things to do
 
+- type-checking should probably also re-write let variables to their 
+    alpha equivalence class
+    - this is mainly so that closure re-writing isn't hell
 add separate closure-rewrites to the AST (after type-checking)
 - two problems:
     - recursion
@@ -16,6 +19,8 @@ add separate closure-rewrites to the AST (after type-checking)
                     we will still allocate the closure object
                 - specifically the concept of a not-quite-defined function
                     is required I believe
+        - recursion code is still going to be used from MIR, we're just going
+            to re-write it now
     - calling functions with different type environments
         - this will 100% violate the type checking, so do it afterwards
         - essentially, we will store information in the upper 16 bits of 
@@ -41,6 +46,8 @@ add separate closure-rewrites to the AST (after type-checking)
     - along with break statements
 write tests to check the typechecker rejects invalid programs
 
+## Test case ideas
+- generators (should be possible with capture)
 
 ## Nice to haves 
 zero-argument functions with unit
@@ -54,6 +61,9 @@ add arrays/pointers???????
 
 ## Language features/spec/changes
 
+- nullptr is now added. It is considered a base type for any
+    pointer type (records and function pointers)
+    - 
 we are for now forbidding recursive types (will implement after closures)
 
 apparently declarations made in the condition of an if and/or while
@@ -65,5 +75,3 @@ of that expression
 assignments to record expressions are completely stupid and functionally no-ops.
 As such, even though records are technically l-values, we forbid them
 
-like other high-level languages, record variables are actually pointers
-to records. Null isn't supported for obvious reasons.

@@ -5,6 +5,7 @@
 %token EOF
 %token <string> ID
 %token <int> NUM
+%token NULLPTR
 %token COMMA COLON SEMICOLON LPAREN RPAREN LBRACE RBRACE
 %token PLUS MINUS TIMES DIVIDE EQ NEQ LT LE GT GE BOR BAND BXOR SHL SHR
 %token AND OR ASSIGN
@@ -60,6 +61,7 @@ expr:
     | lvalue { $1 }
     | TRUE { Bool(true) }
     | FALSE { Bool(false) }
+    | NULLPTR { Nullptr }
     | expr LPAREN exprlist RPAREN { FtmlkApp($1, $3) }
     | NUM { Num($1) }
     | LET ID COLON type_parse EQ expr IN expr { Let($2, $4, $6, $8, ref false, false) }

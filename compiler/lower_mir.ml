@@ -264,6 +264,8 @@ and expr_to_mir
     else
       (Const 0)),
     renamings
+  | Nullptr ->
+    [], (Const 0), renamings
   | RecordExp fields ->
     let res = Regs.new_temp () in
     let offsets, sz = 

@@ -24,6 +24,7 @@ and
   | Var of string
   | Num of int
   | Bool of bool
+  | Nullptr
   | RecordExp of (string * expr) list
   | If of expr * expr * expr
   | Let of string * type_placeholder * expr * expr * bool ref * bool

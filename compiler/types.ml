@@ -1,6 +1,7 @@
 type t = 
   Bool
   | Int
+  | Nullptr
   | Ftmlk of t * t
   | Unit
   | Record of (string * t) list

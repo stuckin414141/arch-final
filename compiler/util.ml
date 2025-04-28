@@ -7,6 +7,7 @@ let string_of_token = function
   | Grammar.EOF -> "EOF"
   | Grammar.ID id -> "ID(" ^ id ^ ")"
   | Grammar.NUM n -> "NUM(" ^ string_of_int n ^ ")"
+  | Grammar.NULLPTR -> "NULLPTR"
   | Grammar.COMMA -> "COMMA"
   | Grammar.COLON -> "COLON" 
   | Grammar.SEMICOLON -> "SEMICOLON"
@@ -75,6 +76,7 @@ let string_of_binop : Binops.t -> string = function
 let rec string_of_type : Types.t -> string = function
   | Types.Int -> "int"
   | Types.Bool -> "bool"
+  | Types.Nullptr -> "nullptr"
   | Types.Ftmlk (t1, t2) ->
       "(" ^ (string_of_type t1) ^ ")->(" ^ (string_of_type t2) ^ ")"
   | Types.Unit -> "unit"
@@ -159,6 +161,8 @@ and string_of_untyped_expr depth = function
       indent_str depth ^ "Num " ^ string_of_int n ^ "\n"
   | Untyped_ast.Bool b ->
       indent_str depth ^ "Bool " ^ string_of_bool b ^ "\n"
+  | Untyped_ast.Nullptr ->
+    indent_str depth ^ "Nullptr\n"
   | Untyped_ast.If (cond, then_branch, else_branch) ->
       let indentation = indent_str depth in
       indentation ^ "If\n" ^
@@ -290,6 +294,8 @@ and string_of_ast_expr depth = function
       indent_str depth ^ "Num " ^ string_of_int n ^ "\n"
   | Ast.Bool b ->
       indent_str depth ^ "Bool " ^ string_of_bool b ^ "\n"
+  | Ast.Nullptr -> 
+      indent_str depth ^ "nullptr\n"
   | Ast.If (cond, then_branch, else_branch, typ) ->
       let indentation = indent_str depth in
       indentation ^ "If\n" ^

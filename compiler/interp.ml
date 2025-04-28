@@ -98,6 +98,34 @@ let get_block_label (stmts : Mir.stmt list) : Labels.t =
     | _ -> failwith "Basic block should begin with label")
   | _ -> failwith "Basic block shouldn't be empty"
 
+module Memory = struct
+  (*Memories, memories, oh these old memories bring you tears*)
+  let backing = Array.make 10000 0
+
+  let cur_avail = ref 0x30
+  let get_mem sz = 
+    let next_addr = !cur_avail in
+    cur_avail := !cur_avail + sz;
+    next_addr
+
+  let write_to_addr addr bytes sz = 
+    if addr = 0 then 
+      failwith "Attempt to write to nullptr";
+    for i = 0 to (sz - 1) do
+      Array.set backing (addr + i) (Array.get bytes i)
+    done
+
+  let read_from_addr addr sz = 
+    if addr = 0 then 
+      failwith "attempt to read from nullptr";
+    let ret = Array.make sz 0 in
+    for i = 0 to (sz - 1) do 
+      Array.set ret i (Array.get backing (addr + i))
+    done;
+    ret
+
+end
+
 (*Since addresses are also numbers on real hardware, we build two jump tables*)
 (* The first goes from indices/numbers to addresses*)
 (* The second goes from labels to indices/numbres *)
@@ -123,8 +151,6 @@ let interpreter (blocks : Basicblocks.t list) =
     TempEnv.find lab_addr address_table
   in
   let main_stmts = get_stmts_of_lab "main" in
-  let next_avail_addr = ref 0 in 
-  let memory = Array.make 10000 0 in
   let return_slot : int Array.t option ref = ref None in
   let eval_lval (vars : var_env) (temps : temp_env) (lval : Mir.lval) = 
     match lval with
@@ -194,10 +220,9 @@ let interpreter (blocks : Basicblocks.t list) =
         interpret modified_env other_stmts
       | AssignDeref (lval, expr, sz) ->
         let src_addr = eval_expr vars temps expr |> WordInteger.arr_to_num in
-        let src_val = Array.make sz 0 in 
-        for i = 0 to sz - 1 do 
-          Array.set src_val i (Array.get memory (src_addr + i))
-        done;
+        if src_addr = 0 then
+          failwith "Attempted to access null";
+        let src_val = Memory.read_from_addr src_addr sz in
         let env = 
           (match lval with 
           | Var v ->
@@ -208,10 +233,10 @@ let interpreter (blocks : Basicblocks.t list) =
         interpret env other_stmts
       | Store (dest, src, sz) ->
         let dest_addr = eval_expr vars temps dest |> WordInteger.arr_to_num in
+        if dest_addr = 0 then 
+          failwith "Attempted to store to null";
         let src_val = eval_expr vars temps src in
-        for i = 0 to sz - 1 do 
-          Array.set memory (dest_addr + i) (Array.get src_val i)
-        done;
+        Memory.write_to_addr dest_addr src_val sz;
         interpret env other_stmts
       | Call (recv_lval, loc, call_args) ->
         let handle_print (_ : unit) = 
@@ -222,8 +247,7 @@ let interpreter (blocks : Basicblocks.t list) =
         let handle_more_mem (_ : unit) = 
             let sz_requested = 
               call_args |> List.hd |> eval_val vars temps |> WordInteger.arr_to_num in
-            let addr = !next_avail_addr in
-            next_avail_addr := !next_avail_addr + sz_requested;
+            let addr = Memory.get_mem sz_requested in
             addr
         in
         let args_to_pass = 

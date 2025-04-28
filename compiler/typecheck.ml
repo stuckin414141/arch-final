@@ -41,7 +41,25 @@ let rec check_valid_type_decl (type_name : string)
       if type_name = str then false
       else true
 
+let are_equivalent_types (t1 : Types.t) (t2 : Types.t) : bool = 
+  match t1 with
+  | Record _ | Ftmlk (_, _) | Nullptr ->
+    (match t2 with
+    | Record _ | Ftmlk (_, _) | Nullptr -> true
+    | _ -> t1 = t2)
+  | _ -> t1 = t2
 
+let assignment_valid (dest_type : Types.t) (src_type : Types.t) = 
+  let is_nullptr_case = 
+    match dest_type with
+    | Nullptr -> failwith "Cannot write to a null pointer"
+    | Record _ | Ftmlk (_, _) ->
+      (match src_type with
+      | Nullptr -> true
+      | _ -> false)
+    | _ -> false
+  in
+    is_nullptr_case || (dest_type = src_type)
 
 (*first part of types is for variables fyi*)
 let rec typecheck_stmt ast (types : types * types) : 
@@ -93,7 +111,7 @@ let rec typecheck_stmt ast (types : types * types) :
           let (_, init_type, init_expr) = typecheck_expr init_expr types in
           (init_type, init_expr)
       in
-      if init_type <> real_type then
+      if not (assignment_valid real_type init_type) then
         failwith "Type of initialization statement does not match variable type"
       else
         ((updated_vars, type_env), Types.Unit, 
@@ -101,7 +119,7 @@ let rec typecheck_stmt ast (types : types * types) :
   | Assign (target, expr) ->
     let (_, target_typ, target_ast) = typecheck_expr target types in
     let (_, expr_typ, expr_ast) = typecheck_expr expr types in
-    if target_typ <> expr_typ then 
+    if not (assignment_valid target_typ expr_typ) then 
       failwith "Types in assign statement must match"
     else
       (types, Types.Unit, Assign (target_ast, expr_ast, expr_typ))
@@ -135,6 +153,7 @@ and typecheck_expr ast types =
     | None -> failwith ("Variable " ^ var_name ^ " used before declaration"))
   | Num n -> (types, Types.Int, Ast.Num n)
   | Bool b -> (types, Types.Bool, Ast.Bool b)
+  | Nullptr -> (types, Types.Nullptr, Ast.Nullptr)
   | If (cond, then_expr, else_expr) ->
     let (cond_types, cond_type, cond_ast) = typecheck_expr cond types in
     if cond_type <> Types.Bool then
@@ -142,7 +161,7 @@ and typecheck_expr ast types =
     else
       let (_, then_type, then_ast) = typecheck_expr then_expr cond_types in
       let (_, else_type, else_ast) = typecheck_expr else_expr cond_types in
-      if then_type <> else_type then
+      if not (are_equivalent_types then_type else_type) then
         failwith "Then and else branches of if expression must have the same type"
       else
         (types, then_type, Ast.If(cond_ast, then_ast, else_ast, then_type))
@@ -160,7 +179,7 @@ and typecheck_expr ast types =
           let (_, init_type, init_expr) = typecheck_expr init_expr types in
           init_type, init_expr
       in
-      if init_type <> real_var_type then
+      if not (assignment_valid real_var_type init_type) then
         failwith "Type of initialization statement does not match variable type"
       else
         let (_, body_type, body_expr) = typecheck_expr body_expr updated_types in
@@ -188,7 +207,7 @@ and typecheck_expr ast types =
       else
         (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool))
     | Binops.Eq | Binops.Neq   ->
-      if left_type <> right_type then
+      if not (are_equivalent_types left_type right_type) then
         failwith "Comparison operations require operands of the same type"
       else
         (types, Types.Bool, Ast.BinOp (left_expr, op, right_expr, Types.Bool)))
@@ -219,7 +238,7 @@ and typecheck_expr ast types =
       let (_, arg_type, _) = typecheck_expr arg types in
       (match func_type with
       | Types.Ftmlk (outer, rest) ->
-        if outer <> arg_type then 
+        if not (are_equivalent_types outer arg_type) then 
           failwith "wrong types"
         else
           rest

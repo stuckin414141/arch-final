@@ -37,6 +37,7 @@ and
   | MemberOf of expr * string * Types.t
   | Var of string
   | Num of int
+  | Nullptr
   | Bool of bool
   | RecordExp of (string * expr * Types.t) list
   | If of expr * expr * expr * Types.t
