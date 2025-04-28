@@ -353,7 +353,7 @@ and ftmlk_to_mir
   the static link*)
   let (args, body) = 
     match ftmlk_expr with
-    | Ftmlk (a, b) -> (a, b)
+    | Ftmlk (a, b, _) -> (a, b)
     | _ -> failwith "Called ftmlk_to_mir on non-ftmlk"
   in
   let process_args (insts : Mir.stmt list)

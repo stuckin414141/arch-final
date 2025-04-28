@@ -331,13 +331,14 @@ and string_of_ast_expr depth = function
       string_of_ast_stmt (depth + 4) stmt ^
       indentation ^ "  Expr\n" ^
       string_of_ast_expr (depth + 4) expr
-  | Ast.Ftmlk (args, body) ->
+  | Ast.Ftmlk (args, body, requires_env) ->
       let indentation = indent_str depth in
       let args_strs = List.map (fun (name, typ, ref) ->
         indentation ^ "    " ^ name ^ " : " ^ string_of_type typ ^ "\n" ^
         indentation ^ "      Ref: " ^ string_of_bool !ref ^ "\n"
       ) args in
       indentation ^ "Ftmlk\n" ^
+      indentation ^ "Requires env: " ^ (string_of_bool !requires_env) ^ "\n" ^
       indentation ^ "  Args\n" ^
       String.concat "" args_strs ^
       indentation ^ "  Body\n" ^

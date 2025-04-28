@@ -6,7 +6,12 @@ let outer3: int = 30;
 let selective_capture: (bool)->(int) = ftmlk(b : bool) {
   // outer1 and outer3 should escape, but not outer2
   let inner1: (bool)->(int) = ftmlk(b : bool) {
-    outer1 + outer3
+    let adder : int -> int -> int = 
+        ftmlk (a : int, b : int) {
+            a + b
+        }
+    in
+    adder(outer1, outer3)
   };
     
   inner1(true)

@@ -288,7 +288,7 @@ and typecheck_expr ast types =
       (name, convert_to_type typ type_env, b)) params in
     let param_types = List.map (fun (_, typ, _) -> convert_to_type typ type_env) params in 
     let func_type = param_to_ftmlk param_types body_type in
-    (types, func_type, Ast.Ftmlk (params_with_types, body_expr))
+    (types, func_type, Ast.Ftmlk (params_with_types, body_expr, ref false))
   | FtmlkApp (func, args) ->
     (*Any definitions make either in func or in any of the 
     args will not be available outside of them*)

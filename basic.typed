@@ -15,6 +15,7 @@ Seq
                 type: (int)->(int)
                 Expr
                   Ftmlk
+                  Requires env: false
                     Args
                       y0 : int
                         Ref: false
@@ -25,6 +26,7 @@ Seq
                             type: (int)->(int)
                             Expr
                               Ftmlk
+                              Requires env: false
                                 Args
                                   z0 : int
                                     Ref: false
@@ -61,11 +63,13 @@ Seq
           type: ({x: int, y: int})->((int)->(int))
           Expr
             Ftmlk
+            Requires env: false
               Args
                 p0 : {x: int, y: int}
                   Ref: false
               Body
                 Ftmlk
+                Requires env: false
                   Args
                     z0 : int
                       Ref: false

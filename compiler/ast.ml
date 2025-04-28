@@ -44,5 +44,5 @@ and
   | Let of string * Types.t * expr * expr * bool ref * bool
   | BinOp of expr * Binops.t * expr * Types.t
   | ESeq of stmt * expr
-  | Ftmlk of (string * Types.t * bool ref) list * expr
+  | Ftmlk of (string * Types.t * bool ref) list * expr * bool ref
   | FtmlkApp of expr * expr list
