@@ -50,10 +50,16 @@ let compile filename debug =
     let untyped_ast = get_untyped_ast src in
     if debug then
         output "ua" (Compiler.Util.string_of_untyped_ast untyped_ast);
-    let (_, _, typed_ast) = Compiler.Typecheck.analyze untyped_ast in
+    let alpha_untyped_ast = Compiler.Alpha.convert untyped_ast in
+    if debug then 
+        output "alpha" (Compiler.Util.string_of_untyped_ast alpha_untyped_ast);
+    let (_, _, typed_ast) = Compiler.Typecheck.analyze alpha_untyped_ast in
     (if debug then
-        output "ast" (Compiler.Util.string_of_ast typed_ast));
-    let mir = Compiler.Lower_mir.lower false 8 typed_ast in
+        output "typed" (Compiler.Util.string_of_ast typed_ast));
+    let escape_ast = Compiler.Closure.Escape.analyze typed_ast in
+    (if debug then
+        output "escape" (Compiler.Util.string_of_ast escape_ast));
+    let mir = Compiler.Lower_mir.lower false 8 escape_ast in
     (if debug then 
         output "mir" (Compiler.Util.string_of_mir_list mir));
     let bb = Compiler.Basicblocks.convert mir in

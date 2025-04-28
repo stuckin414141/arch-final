@@ -1,6 +1,8 @@
 // with the addition of null, we can now create linked lists
 type intlist = {elem : int; next : intlist};
 
+let elem : int = 31337;
+
 let add_elem : int -> intlist -> intlist = 
     ftmlk (elem : int, list : intlist) {
         {elem=elem; next=list}

@@ -1,9 +1,7 @@
 
 ## Things to do
 
-- type-checking should probably also re-write let variables to their 
-    alpha equivalence class
-    - this is mainly so that closure re-writing isn't hell
+- test alpha-renaming
 - you currently don't have support for negative integers.
     - add support for two's complement
 add separate closure-rewrites to the AST (after type-checking)

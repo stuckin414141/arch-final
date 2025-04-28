@@ -124,14 +124,18 @@ and rewrite_expr (renamings : Renamings.t) (ast : Untyped_ast.expr) : Untyped_as
     let body_ast, _ = 
       rewrite_expr func_renamings body
     in
-    Ftmlk (alpha_args, body_ast),
+    Ftmlk (alpha_args |> List.rev, body_ast),
     renamings
   | FtmlkApp (func, args) ->
     let get_alpha_arg alpha_args arg = 
       let (arg_ast, _) = rewrite_expr renamings arg in
       arg_ast :: alpha_args
     in
-    let alpha_args = List.fold_left get_alpha_arg [] args
+    let alpha_args = List.fold_left get_alpha_arg [] args |> List.rev
     in
     let (func_ast, _) = rewrite_expr renamings func in
     FtmlkApp (func_ast, alpha_args), renamings
+
+  let convert ast = 
+    let (result, _) = rewrite_stmt (Renamings.empty) ast in
+    result

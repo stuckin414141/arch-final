@@ -3,4 +3,4 @@ main: Makefile
 
 clean:
 	-dune clean
-	-rm -rf *.lex *.ast *.ua *.mir *.bb
+	-rm -rf *.lex *.ast *.ua *.mir *.bb *.alpha *.escape

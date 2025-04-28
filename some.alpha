@@ -1,0 +1,86 @@
+Seq
+  Seq
+    Seq
+      Seq
+        LetStmt outer10
+          Type
+            Typ int
+          Expr
+            Num 10
+          Ref: false
+          Is recursive: false
+        LetStmt outer20
+          Type
+            Typ int
+          Expr
+            Num 20
+          Ref: false
+          Is recursive: false
+      LetStmt outer30
+        Type
+          Typ int
+        Expr
+          Num 30
+        Ref: false
+        Is recursive: false
+    LetStmt selective_capture0
+      Type
+        ArrowType
+          From
+            Typ bool
+          To
+            Typ int
+      Expr
+        Ftmlk
+          Args
+            b0
+              Type
+                Typ bool
+              Ref: false
+          Body
+            ESeq
+              Stmt
+                Seq
+                  LetStmt inner10
+                    Type
+                      ArrowType
+                        From
+                          Typ bool
+                        To
+                          Typ int
+                    Expr
+                      Ftmlk
+                        Args
+                          b1
+                            Type
+                              Typ bool
+                            Ref: false
+                        Body
+                          BinOp +
+                            Left
+                              Var outer10
+                            Right
+                              Var outer30
+                    Ref: false
+                    Is recursive: false
+                  LetStmt unused0
+                    Type
+                      Typ int
+                    Expr
+                      Var outer20
+                    Ref: false
+                    Is recursive: false
+              Expr
+                FtmlkApp
+                  Func
+                    Var inner10
+                  Args
+                    Bool true
+      Ref: false
+      Is recursive: false
+  Print
+    FtmlkApp
+      Func
+        Var selective_capture0
+      Args
+        Bool false

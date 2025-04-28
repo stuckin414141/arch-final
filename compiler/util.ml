@@ -261,7 +261,7 @@ let rec string_of_ast_stmt depth = function
       indentation ^ "  type: " ^ string_of_type typ ^ "\n" ^
       indentation ^ "  Expr\n" ^
       string_of_ast_expr (depth + 4) expr ^
-      indentation ^ "  Ref: " ^ string_of_bool !ref ^ "\n" ^
+      indentation ^ "  Is closure: " ^ string_of_bool !ref ^ "\n" ^
       indentation ^ "  Is recursive: " ^ string_of_bool is_recursive ^ "\n"
   | Ast.Print expr ->
       let indentation = indent_str depth in
@@ -313,7 +313,7 @@ and string_of_ast_expr depth = function
       string_of_ast_expr (depth + 4) expr ^
       indentation ^ "  Body\n" ^
       string_of_ast_expr (depth + 4) body ^
-      indentation ^ "  Ref: " ^ string_of_bool !ref ^ "\n" ^
+      indentation ^ "  Is closure: " ^ string_of_bool !ref ^ "\n" ^
       indentation ^ "  Recursive: " ^ string_of_bool is_recursive ^ "\n" ^
       indentation ^ "  Type: " ^ string_of_type typ ^ "\n"
   | Ast.BinOp (left, op, right, typ) ->

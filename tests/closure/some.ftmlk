@@ -1,0 +1,15 @@
+// Tests selective capture of variables
+let outer1: int = 10;
+let outer2: int = 20;
+let outer3: int = 30;
+
+let selective_capture: (bool)->(int) = ftmlk(b : bool) {
+  // outer1 and outer3 should escape, but not outer2
+  let inner1: (bool)->(int) = ftmlk(b : bool) {
+    outer1 + outer3
+  };
+    
+  inner1(true)
+};
+
+print(selective_capture(false))  // Should output 40 (10 + 30)

@@ -1,0 +1,26 @@
+// Tests basic capturing of variables from outer scopes
+let x: int = 10;
+
+let nested_functions: int->int = ftmlk(y: int) {
+  let f: int->int = ftmlk(z: int) {
+    x + y + z  // x and y should escape
+  };
+  
+  f(y)
+};
+
+print(nested_functions(20));  // Should output 50 (10 + 20 + 20)
+
+// Tests escape analysis with record fields
+type Point = {x: int; y: int};
+
+let make_adder: (Point)->(int)->(int) = ftmlk(p: Point) {
+  // p should escape since its fields are accessed in the inner function
+  ftmlk(z: int) {
+    p.x + p.y + z
+  }
+};
+
+let point: Point = {x = 5; y = 10};
+let adder: (int)->(int) = make_adder(point);
+print(adder(15))  // Should output 30 (5 + 10 + 15)
