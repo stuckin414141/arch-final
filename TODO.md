@@ -1,10 +1,7 @@
 
 ## Things to do
 
-- fix recursive types
-    - since mutual recursion isn't allowed we can probably get away with a 
-        "self" type --- we treat it as an opaque record
-    - if memberOf is called then we substitute w/ the original type
+- test recursive types rigorously
 - type-checking should probably also re-write let variables to their 
     alpha equivalence class
     - this is mainly so that closure re-writing isn't hell
@@ -54,10 +51,9 @@ write tests to check the typechecker rejects invalid programs
 - generators (should be possible with capture)
 
 ## Nice to haves 
+have recursive types not be opaque/scuffed
+- the type checker is currently crying
 zero-argument functions with unit
-re-structure pipeline to better support debugging multiple analyses/re-writes
-- optimally you will have a single compilation pipeline
-- turning on debug mode dumps debug info to other files
 
 implement polymorphic types/typechecking
 implement type-inference

@@ -1,0 +1,54 @@
+//woah, we can also make binary search trees!
+type tree = {left : tree; right: tree; elem : int};
+
+let rec insert : int -> tree -> tree = 
+    ftmlk(elem : int, tree : tree) {
+        if tree == nullptr then
+            {left=nullptr; right=nullptr; elem=elem}
+        else
+            if elem < tree.elem then 
+                { left=insert(elem, tree.left);
+                right=tree.right;
+                elem=tree.elem}
+            else 
+                {
+                    left=tree.left;
+                    right=insert(elem, tree.right);
+                    elem=tree.elem
+                    }
+    };
+
+let rec is_member : int -> tree -> bool = 
+    ftmlk(elem_to_find : int, tree : tree) {
+        if tree = nullptr then 
+            false
+        else if elem_to_find == tree.elem then
+            true
+        else if elem_to_find < tree.elem then 
+            is_member(elem_to_find, tree.left)
+        else 
+            is_member(elem_to_find, tree.right)
+    };
+
+let test_bst : tree = 
+    insert(10, 
+        insert(13,
+            insert(7,
+                insert(99,
+                    nullptr
+                )
+            )
+        )
+    );
+
+if is_member(7, test_bst) {
+    print(77)
+};
+
+if is_member(10, test_bst) {
+    print(100)
+};
+
+if is_member(12, test_bst) == false {
+    print(1337)
+}

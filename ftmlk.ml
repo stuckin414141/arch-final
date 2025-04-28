@@ -38,7 +38,6 @@ let output filename append content =
         | Some f -> f ^ "." ^ append
         | None -> filename ^ "." ^ append
     in
-    print_endline output_file;
     let output_file = Stdio.Out_channel.create output_file ~fail_if_exists:false in
     Stdio.Out_channel.output_string output_file content;
     Stdio.Out_channel.flush output_file

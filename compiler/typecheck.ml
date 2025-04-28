@@ -167,8 +167,6 @@ let rec typecheck_stmt ast (types : types * types) :
           let (_, init_type, init_expr) = typecheck_expr init_expr types in
           (init_type, init_expr)
       in
-      print_endline ("Init_type: " ^ (Util.string_of_type init_type));
-      print_endline ("Real_type: " ^ Util.string_of_type real_type);
       if not (assignment_valid real_type init_type) then
         failwith "Type of initialization statement does not match variable type"
       else
