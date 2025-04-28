@@ -3,81 +3,112 @@ Seq
     Seq
       Seq
         Seq
-          IfUnit
-            Cond
-              BinOp >
-                Left
-                  Num 5
-                Right
-                  Num 3
-                Type: bool
-            Body
-              Print
-                Num 1
-          LetStmt x
-            type: int
+          Seq
+            IfUnit
+              Cond
+                BinOp >
+                  Left
+                    Num 5
+                  Right
+                    Num 3
+                  Type: bool
+              Body
+                Print
+                  Num 1
+            LetStmt x
+              type: int
+              Expr
+                If
+                  Cond
+                    BinOp >
+                      Left
+                        Num 5
+                      Right
+                        Num 3
+                      Type: bool
+                  Then
+                    If
+                      Cond
+                        BinOp <
+                          Left
+                            Num 1
+                          Right
+                            Num 2
+                          Type: bool
+                      Then
+                        Let x
+                          Expr
+                            Num 4
+                          Body
+                            ESeq
+                              Stmt
+                                While
+                                  BinOp <
+                                    Left
+                                      Var x
+                                    Right
+                                      Num 15
+                                    Type: bool
+                                  Assign x
+                                    Expr
+                                      BinOp *
+                                        Left
+                                          Var x
+                                        Right
+                                          Var x
+                                        Type: int
+                                    Type: int
+                              Expr
+                                Var x
+                          Ref: false
+                          Recursive: false
+                          Type: int
+                      Else
+                        Num 200
+                      Type: int
+                  Else
+                    Num 300
+                  Type: int
+              Ref: false
+              Is recursive: false
+          Print
+            Var x
+        LetStmt i
+          type: int
+          Expr
+            Num 0
+          Ref: false
+          Is recursive: false
+      While
+        BinOp <
+          Left
+            Var i
+          Right
+            Num 10
+          Type: bool
+        Seq
+          Seq
+            IfUnit
+              Cond
+                BinOp >
+                  Left
+                    Var i
+                  Right
+                    Num 5
+                  Type: bool
+              Body
+                Break
+            Print
+              Var i
+          Assign i
             Expr
-              If
-                Cond
-                  BinOp >
-                    Left
-                      Num 5
-                    Right
-                      Num 3
-                    Type: bool
-                Then
-                  If
-                    Cond
-                      BinOp <
-                        Left
-                          Num 1
-                        Right
-                          Num 2
-                        Type: bool
-                    Then
-                      Let x
-                        Expr
-                          Num 4
-                        Body
-                          ESeq
-                            Stmt
-                              While
-                                BinOp <
-                                  Left
-                                    Var x
-                                  Right
-                                    Num 15
-                                  Type: bool
-                                Assign x
-                                  Expr
-                                    BinOp *
-                                      Left
-                                        Var x
-                                      Right
-                                        Var x
-                                      Type: int
-                                  Type: int
-                            Expr
-                              Var x
-                        Ref: false
-                        Recursive: false
-                        Type: int
-                    Else
-                      Num 200
-                    Type: int
-                Else
-                  Num 300
+              BinOp +
+                Left
+                  Var i
+                Right
+                  Num 1
                 Type: int
-            Ref: false
-            Is recursive: false
-        Print
-          Var x
-      LetStmt i
-        type: int
-        Expr
-          Num 0
-        Ref: false
-        Is recursive: false
+            Type: int
     LetStmt is_the_counter_up_to_date
       type: (int)->(bool)
       Expr

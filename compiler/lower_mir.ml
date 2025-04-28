@@ -73,6 +73,15 @@ module Renamings = struct
   let empty = Symbols.SymbolTable.empty
 end
 
+let if_counter = ref 0
+let while_counter = ref 0  
+let func_counter = ref 0
+
+let is_expr_ftmlk (expr : Ast.expr) = 
+  match expr with
+  | Ftmlk _ -> true
+  | _ -> false 
+
 let rec stat_to_mir 
   (must_be_aligned : bool) 
   (word_size : int) 
@@ -82,12 +91,17 @@ let rec stat_to_mir
   let size_of_type = size_of_type word_size in 
   let expr_to_mir = expr_to_mir must_be_aligned word_size loop_end in
   let reg_stm = stat_to_mir must_be_aligned word_size loop_end in
-  let new_label = Labels.new_label in
   match ast with
   | While (cond, stmt) ->
     let (cond_insts, cond_val, cond_renamings) = expr_to_mir renamings cond in
-    let begin_label = Labels.new_label () in
-    let end_label = Labels.new_label () in
+    let while_num = !while_counter |> string_of_int in
+    while_counter := !while_counter + 1;
+    let begin_label = 
+      Labels.named_label (while_num ^ "WhileBegin") 
+    in
+    let end_label = 
+      Labels.named_label (while_num ^ "WhileEnd")
+    in
     let stmt_insts, _ = 
       stat_to_mir must_be_aligned word_size (Some end_label) cond_renamings stmt 
     in
@@ -99,8 +113,16 @@ let rec stat_to_mir
       [ Goto (begin_label, None);
       MakeLabel end_label]
     ) : Mir.stmt list), renamings
-  | LetStmt (var_name, var_typ, init_expr, _, _) ->
-    let (init_insts, init_val, _) = expr_to_mir renamings init_expr in
+  | LetStmt (var_name, var_typ, init_expr, _, is_recursive) ->
+    let (init_insts, init_val, _) = 
+      if is_expr_ftmlk init_expr then
+        let func_addr = 
+          ftmlk_to_mir must_be_aligned word_size init_expr (Some var_name) is_recursive
+        in
+          [], func_addr, renamings
+      else
+        expr_to_mir renamings init_expr 
+    in
     let val_size = 
       (match var_typ with 
         | Bool -> 1
@@ -132,8 +154,13 @@ let rec stat_to_mir
   | IfUnit (cond, stmt) ->
     let (cond_insts, cond_val, cond_renamings) = expr_to_mir renamings cond in
     let stmt_insts, _ = reg_stm cond_renamings stmt in
-    let true_label = new_label () in
-    let end_label = new_label () in 
+    let if_num = !if_counter |> string_of_int in
+    if_counter := !if_counter + 1;
+    let true_label = 
+      Labels.named_label (if_num ^ "IfUnitTrue") 
+    in
+    let end_label = 
+      Labels.named_label (if_num ^ "IfUnitEnd") in 
     Mir.(
       cond_insts @
       [Goto (true_label, Some (Value cond_val)); 
@@ -153,6 +180,7 @@ let rec stat_to_mir
     | None ->
       failwith "Attempt to break without being inside a loop")
   | Nothing -> [], renamings
+
 and expr_to_mir 
   (must_be_aligned : bool) 
   (word_size : int) 
@@ -239,28 +267,42 @@ and expr_to_mir
     let (cond_insts, cond_val, cond_renamings) = reg_etm renamings cond in
     let (then_insts, then_val, _) = reg_etm cond_renamings then_expr in
     let (else_insts, else_val, _) = reg_etm cond_renamings else_expr in
-    let then_label = Labels.new_label () in
-    let else_label = Labels.new_label () in
-    let end_label = Labels.new_label () in
+    let cur_if_num = !if_counter |> string_of_int in
+    if_counter := !if_counter + 1;
+    let then_label = 
+      Labels.named_label (cur_if_num ^ "Then") 
+    in
+    let else_label = 
+      Labels.named_label (cur_if_num ^ "Else") 
+    in
+    let end_label = 
+      Labels.named_label (cur_if_num ^ "IfEnd") 
+    in
     cond_insts @
     Mir.([Goto (then_label, Some (Value (cond_val))); 
     Goto (else_label, None)] @ 
+    MakeLabel (then_label) ::
     then_insts @
     [
-      MakeLabel (then_label);
       Assign (Temp result_reg, Value then_val, size_of_type typ);
       Goto (end_label, None)
     ] @
+    MakeLabel (else_label) ::
     else_insts @
-    [ MakeLabel (else_label);
-      Assign (Temp result_reg, Value else_val, size_of_type typ);
+    [ Assign (Temp result_reg, Value else_val, size_of_type typ);
       MakeLabel end_label]), Lval (Temp result_reg), renamings
-  | Let (var_name, var_typ, init_expr, body_expr, _, _) ->
+  | Let (var_name, var_typ, init_expr, body_expr, _, is_recursive) ->
     let var_name, body_renamings = 
       Renamings.create_new_name var_name renamings 
     in
-    let (init_insts, init_val, _) = 
-      reg_etm renamings init_expr
+    let (init_insts, (init_val : Mir.value), _) = 
+      if is_expr_ftmlk init_expr then
+        [], 
+         
+          (ftmlk_to_mir must_be_aligned word_size init_expr (Some var_name) is_recursive),
+        renamings
+      else
+        reg_etm renamings init_expr
     in
     let (body_insts, body_val, _) = 
       reg_etm body_renamings body_expr
@@ -283,9 +325,9 @@ and expr_to_mir
     in
     let (expr_insts, expr_val, _) = reg_etm stmt_renamings expr in
     stmt_insts @ expr_insts, expr_val, renamings
-  | Ftmlk (args, body) ->
+  | Ftmlk _ ->
     let func_addr = 
-      ftmlk_to_mir must_be_aligned word_size args body None
+      ftmlk_to_mir must_be_aligned word_size ast None false
     in
     ([], func_addr, renamings)
   | FtmlkApp (func, args) ->
@@ -307,30 +349,44 @@ and expr_to_mir
 and ftmlk_to_mir 
   (must_be_aligned : bool) 
   (word_size : int) 
-  (args : (string * Types.t * bool ref) list)
-  (body : Ast.expr)
-  (func_name : string option) =
+  (ftmlk_expr : Ast.expr)
+  (func_name : string option)
+  (is_recursive : bool) =
   (*At this point there should be no closures. All
   accesses to variables from enclosing functions will go through
   the static link*)
+  let (args, body) = 
+    match ftmlk_expr with
+    | Ftmlk (a, b) -> (a, b)
+    | _ -> failwith "Called ftmlk_to_mir on non-ftmlk"
+  in
   let process_args ((insts : Mir.stmt list), (renamings : Renamings.t) )
     ((var_name, _, _) : string * Types.t * bool ref) = 
     let var_name, renamings = Renamings.create_new_name var_name renamings in
     (insts @ [Mir.Arg var_name], renamings)
   in
-  let func_label = Labels.new_label () in
+  let func_num = !func_counter |> string_of_int in 
+  func_counter := !func_counter + 1;
+  let func_label = Labels.named_label (
+    match func_name with
+    | Some func_name -> func_num ^ func_name
+    | None -> func_num ^ "F") in
   let (arg_insts, func_renamings) = 
     let (arg_insts, arg_renamings) = 
       List.fold_left process_args ([], Renamings.empty) args
     in
-    match func_name with
-    | Some func_name ->
+    if is_recursive then
       let (func_name, func_renamings) =
-        Renamings.create_new_name func_name arg_renamings
+        Renamings.create_new_name (
+          match func_name with 
+          | Some f_n -> f_n
+          | None -> failwith "Anonymous function can't be recursive"
+        )
+        arg_renamings
       in
         Mir.(Assign (Var func_name, Value (Address func_label), word_size)) ::
         arg_insts, func_renamings
-    | None -> 
+    else
       (arg_insts, arg_renamings)
   in
   let (func_body, func_val, _) = 

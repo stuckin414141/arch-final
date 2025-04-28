@@ -374,35 +374,35 @@ let string_of_lval = function
 
 let string_of_value = function
   | Mir.Lval lval -> string_of_lval lval
-  | Mir.Const n -> "Const(" ^ string_of_int n ^ ")"
+  | Mir.Const n -> string_of_int n
   | Mir.Address label -> "Address(" ^ Labels.to_string label ^ ")"
 
 let string_of_expr = function
   | Mir.Operation (v1, op, v2) -> 
-      "Operation(" ^ string_of_value v1 ^ ", " ^ 
-      string_of_binop op ^ ", " ^ 
-      string_of_value v2 ^ ")"
-  | Mir.Value v -> "Value(" ^ string_of_value v ^ ")"
+      string_of_value v1 ^ " " ^ 
+      string_of_binop op ^ " " ^ 
+      string_of_value v2 
+  | Mir.Value v -> string_of_value v
 
 let string_of_mir_stmt depth stmt =
   let indentation = indent_str depth in
   match stmt with
   | Mir.Arg name ->
-      indentation ^ "Arg " ^ name ^ "\n"
+      indentation ^ name ^ " = Arg\n"
   | Mir.Goto (label, cond_opt) ->
       let cond_str = match cond_opt with
         | None -> ""
         | Some expr -> " if " ^ string_of_expr expr
       in
-      indentation ^ "Goto " ^ Labels.to_string label ^ cond_str ^ "\n"
+      indentation ^ cond_str ^ " goto " ^ Labels.to_string label ^ "\n"
   | Mir.Assign (lval, expr, size) ->
-      indentation ^ "Assign " ^ string_of_lval lval ^ " := " ^
+      indentation ^ string_of_lval lval ^ " := " ^
       string_of_expr expr ^ " (size: " ^ string_of_int size ^ ")\n"
   | Mir.AssignDeref (lval, expr, size) ->
-      indentation ^ "AssignDeref " ^ string_of_lval lval ^ " := " ^
-      string_of_expr expr ^ " (size: " ^ string_of_int size ^ ")\n"
+      indentation ^ string_of_lval lval ^ " := *(" ^
+      string_of_expr expr ^ ") (size: " ^ string_of_int size ^ ")\n"
   | Mir.Store (dest, src, size) ->
-      indentation ^ "Store " ^ string_of_expr dest ^ " := " ^
+      indentation ^ "*(" ^ string_of_expr dest ^ ") := " ^
       string_of_expr src ^ " (size: " ^ string_of_int size ^ ")\n"
   | Mir.Call (dest_opt, func, args) ->
       let dest_str = match dest_opt with

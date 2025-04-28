@@ -61,6 +61,31 @@
  EQ
  NUM(0)
  SEMICOLON
+ WHILE
+ ID(i)
+ LT
+ NUM(10)
+ LBRACE
+ IF
+ ID(i)
+ GT
+ NUM(5)
+ LBRACE
+ BREAK
+ RBRACE
+ SEMICOLON
+ PRINT
+ LPAREN
+ ID(i)
+ RPAREN
+ SEMICOLON
+ ID(i)
+ ASSIGN
+ ID(i)
+ PLUS
+ NUM(1)
+ RBRACE
+ SEMICOLON
  LET
  ID(is_the_counter_up_to_date)
  COLON

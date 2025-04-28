@@ -1,0 +1,35 @@
+type Point = {x: int; y: int};
+let p1: Point = {x = 5; y = 10};
+let p2: Point = {x = 3; y = 7};
+print(p1.x + p2.y);
+
+type Person = {age: int; active: bool; employed : bool; level : int;
+gender : int; income : int};
+let employee: Person = {
+  age = 30;
+  active = true;
+  employed = false;
+  level = 4;
+  gender = 40000;
+  income = 9
+};
+
+print(employee.gender);
+if employee.active {
+    print(1)
+};
+
+//poor man's oop
+type boss = {fire : Person -> Person; level : int};
+let yourefired : Person -> Person = 
+    ftmlk (e : Person) {
+        if e.level < 5 then
+            {age = e.age; active = e.active; employed = false; 
+            level = 0; gender = e.gender; income = 0}
+         else 
+            e
+        
+    };
+let tyrell : boss = {fire = yourefired; level = 10};
+let sad : Person = tyrell.fire(employee);
+print(sad.income);

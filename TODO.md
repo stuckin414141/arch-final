@@ -1,12 +1,9 @@
 
 ## Things to do
-- modify debugging pipeline to print to files along with the pipeline
-    - add dune/build options to only build lexer/parser/typechecker/etc.
-    - also make testing infra better
 - do a fuck ton of testing of everything
-    - we now have to test parsing :(
-        - dot in particular
-
+    - records should be fine, as should basic operations
+    - you should test scoping issues next
+    - along with break statements
 lower to MIR
     - logic for recursion is available
         - in let statements you open the initialize expression up by one level to see

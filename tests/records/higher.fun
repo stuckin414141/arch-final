@@ -17,7 +17,7 @@ let addVectors: (Vector)->(Vector)->(Vector) =
 
 let v1: Vector = {x = 3; y = 4};
 let v2: Vector = {x = 2; y = 6};
-let result: Vector = addVectors(v1)(v2);
+let result: Vector = addVectors(v1, v2);
 print(result.x);
 print(result.y);
 
