@@ -129,7 +129,7 @@ end
 (*Since addresses are also numbers on real hardware, we build two jump tables*)
 (* The first goes from indices/numbers to addresses*)
 (* The second goes from labels to indices/numbres *)
-let cur_label_num = ref 0
+let cur_label_num = ref 1
 let rec build_jump_table (bb : Basicblocks.t list) : 
 address_table * label_table * addr_to_label = 
   match bb with
@@ -274,6 +274,8 @@ let interpreter (blocks : Basicblocks.t list) =
             eval_val vars temps |>
             WordInteger.arr_to_num 
           in
+          if func_addr = 0 then 
+            failwith "Attempt to call null function";
           let func_stmts = TempEnv.find func_addr address_table in
           let old_ret_slot = !return_slot in
           return_slot := None;

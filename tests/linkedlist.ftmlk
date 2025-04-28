@@ -1,6 +1,11 @@
 // with the addition of null, we can now create linked lists
 type intlist = {elem : int; next : intlist};
 
+let add_elem : int -> intlist -> intlist = 
+    ftmlk (elem : int, list : intlist) {
+        {elem=elem; next=list}
+    };
+
 let rec traverse_list : intlist -> int = 
     ftmlk (head : intlist) {
         if head != nullptr {
@@ -8,5 +13,7 @@ let rec traverse_list : intlist -> int =
             let z : int = traverse_list(head.next)
         };
         0
-    }
+    };
 
+let z : intlist = add_elem(10, add_elem(11, add_elem(333, nullptr)));
+let n : int = traverse_list(z)

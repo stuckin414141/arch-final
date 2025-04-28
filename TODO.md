@@ -1,6 +1,10 @@
 
 ## Things to do
 
+- fix recursive types
+    - since mutual recursion isn't allowed we can probably get away with a 
+        "self" type --- we treat it as an opaque record
+    - if memberOf is called then we substitute w/ the original type
 - type-checking should probably also re-write let variables to their 
     alpha equivalence class
     - this is mainly so that closure re-writing isn't hell

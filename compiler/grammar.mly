@@ -24,8 +24,6 @@
 
 %left SEMICOLON
 %nonassoc ELSE
-%nonassoc THEN
-%left ASSIGN
 %nonassoc IN
 %left OR
 %left AND

@@ -83,7 +83,7 @@ let rec string_of_type : Types.t -> string = function
   | Types.Record fields ->
       let field_strs = List.map (fun (name, typ) -> name ^ ": " ^ string_of_type typ) fields in
       "{" ^ String.concat ", " field_strs ^ "}"
-  | Types.Placeholder -> "Placeholder"
+  | Types.Self -> "Self"
 
 (*
  * Untyped AST string conversion
@@ -295,7 +295,7 @@ and string_of_ast_expr depth = function
   | Ast.Bool b ->
       indent_str depth ^ "Bool " ^ string_of_bool b ^ "\n"
   | Ast.Nullptr -> 
-      indent_str depth ^ "nullptr\n"
+    indent_str depth ^ "nullptr\n"
   | Ast.If (cond, then_branch, else_branch, typ) ->
       let indentation = indent_str depth in
       indentation ^ "If\n" ^

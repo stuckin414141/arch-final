@@ -41,22 +41,78 @@ let rec check_valid_type_decl (type_name : string)
       if type_name = str then false
       else true
 
-let are_equivalent_types (t1 : Types.t) (t2 : Types.t) : bool = 
+let rec are_equivalent_types (t1 : Types.t) (t2 : Types.t) : bool = 
+  let t2_is_null = t2 = Nullptr in 
+  let check_records t1_fields t2_fields = 
+    let is_equiv = ref false in 
+    let update_is_valid (_, t1) (_, t2) = 
+      is_equiv := are_equivalent_types t1 t2
+    in
+    List.iter2 update_is_valid t1_fields t2_fields;
+    !is_equiv
+  in
   match t1 with
-  | Record _ | Ftmlk (_, _) | Nullptr ->
+  | Self ->
     (match t2 with
-    | Record _ | Ftmlk (_, _) | Nullptr -> true
-    | _ -> t1 = t2)
+    | Record _ -> true
+    | Self -> true 
+    | Nullptr -> true
+    | _ -> false)
+  | Nullptr -> 
+    (match t2 with 
+      | Record _ -> true 
+      | Self -> true
+      | Nullptr -> true
+      | Ftmlk (_, _) -> true
+      | _ -> false)
+  | Ftmlk (outer, inner) ->
+    if t2_is_null then true
+    else 
+      (match t2 with 
+      | Ftmlk (t2_outer, t2_inner) ->
+        are_equivalent_types outer t2_outer &&
+        are_equivalent_types inner t2_inner
+      | _ -> false)
+  | Record t1_fields ->
+    (match t2 with 
+    | Record t2_fields -> check_records t1_fields t2_fields
+    | Nullptr -> true
+    | Self -> true
+    | _ -> false)
   | _ -> t1 = t2
 
-let assignment_valid (dest_type : Types.t) (src_type : Types.t) = 
+let rec assignment_valid (dest_type : Types.t) (src_type : Types.t) = 
+  let src_type_is_null = src_type = Nullptr in
   let is_nullptr_case = 
     match dest_type with
-    | Nullptr -> failwith "Cannot write to a null pointer"
-    | Record _ | Ftmlk (_, _) ->
+    (*TODO: don't make this an opaque record*)
+    | Self -> 
       (match src_type with
+      | Record _ -> true
+      | Self -> true 
       | Nullptr -> true
       | _ -> false)
+    | Nullptr -> failwith "Cannot write to a null pointer"
+    | Record dest_fields -> 
+      if src_type_is_null then true
+      else 
+        (match src_type with 
+        | Record src_fields -> 
+          let is_valid = ref false in
+          let update_is_valid (_, dest) (_, src) = 
+            is_valid := assignment_valid dest src
+          in
+          List.iter2 update_is_valid dest_fields src_fields;
+          !is_valid
+        | _ -> false)
+    | Ftmlk (outer, inner) ->
+      if src_type_is_null then true
+      else 
+        (match src_type with
+        | Ftmlk (src_outer, src_inner) ->
+          assignment_valid outer src_outer &&
+          assignment_valid inner src_inner
+        | _ -> false)
     | _ -> false
   in
     is_nullptr_case || (dest_type = src_type)
@@ -111,6 +167,8 @@ let rec typecheck_stmt ast (types : types * types) :
           let (_, init_type, init_expr) = typecheck_expr init_expr types in
           (init_type, init_expr)
       in
+      print_endline ("Init_type: " ^ (Util.string_of_type init_type));
+      print_endline ("Real_type: " ^ Util.string_of_type real_type);
       if not (assignment_valid real_type init_type) then
         failwith "Type of initialization statement does not match variable type"
       else
@@ -138,10 +196,12 @@ let rec typecheck_stmt ast (types : types * types) :
     if not (check_valid_type_decl type_name type_body type_env) then
       failwith ("Ill-formed type declaration for " ^ type_name)
     else
+      let self_typ = ref None in
       let type_env : types = 
-        Symbols.SymbolTable.add type_name (Types.Placeholder) type_env 
+        Symbols.SymbolTable.add type_name Types.Self type_env 
       in
       let real_type : Types.t = convert_to_type type_body type_env in
+      self_typ := Some real_type;
       let type_env : types = Symbols.SymbolTable.add type_name real_type type_env in
       ((var_types, type_env), Types.Unit, Ast.Nothing)
 and typecheck_expr ast types = 
@@ -296,7 +356,12 @@ and typecheck_expr ast types =
                 )
                 in
         let field_type = get_field_type fields in
-        (types, field_type, MemberOf (record_ast, field, record_type))
+        let unrolled_field_type = 
+          if field_type = Self then
+            record_type
+          else field_type
+        in
+        (types, unrolled_field_type, MemberOf (record_ast, field, record_type))
       | _ -> 
         failwith "Error: attempted to dereference field 
         on non-record type")
