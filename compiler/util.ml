@@ -383,6 +383,7 @@ let string_of_expr = function
       string_of_binop op ^ " " ^ 
       string_of_value v2 
   | Mir.Value v -> string_of_value v
+  | Mir.Not v -> "~ " ^ string_of_value v
 
 let string_of_mir_stmt depth stmt =
   let indentation = indent_str depth in
@@ -423,3 +424,12 @@ let string_of_mir stmts =
 
 let string_of_mir_list funcs = 
   String.concat "\n\n" (List.map (string_of_mir) funcs)
+
+let string_of_basic_blocks (b : Basicblocks.t list) : string= 
+  let bb_to_string ((insts, succ, pred) : Basicblocks.t) =
+    "Succ: " ^ (String.concat ", " succ) ^ "\n" ^
+    "Pred: " ^ (String.concat ", " pred) ^ "\n" ^
+    (string_of_mir insts)
+  in
+  (List.map (bb_to_string) b)  |>
+  String.concat "\n\n"

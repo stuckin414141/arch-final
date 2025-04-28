@@ -1,17 +1,15 @@
 
 ## Things to do
+- add ability to make assignments to records (shudders)
+
+add separate closure-rewrites to the AST
+- fyi the lowering from AST -> MIR considers function pointers to simply be addresses
+
 - do a fuck ton of testing of everything
     - records should be fine, as should basic operations
     - you should test scoping issues next
     - along with break statements
-lower to MIR
-    - logic for recursion is available
-        - in let statements you open the initialize expression up by one level to see
-            if it's a function. If it is, then do recursion
 write tests to check the typechecker rejects invalid programs
-
-add separate closure-rewrites to the AST
-- fyi the lowering from AST -> MIR considers function pointers to simply be addresses
 
 
 ## Nice to haves 

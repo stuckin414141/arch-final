@@ -26,7 +26,7 @@ let stmts_begin_uncond (stmts : Mir.stmt list) =
         stmts
       )
   
-let stmt_to_basic_block (stmts : Mir.stmt list) : t list = 
+let stmts_to_basic_block (stmts : Mir.stmt list) : t list = 
   let all_blocks : t list ref = ref [] in
   let rec logic (stmts : Mir.stmt list) (cur : t) : unit = 
     let (cur_stmts, cur_succ, cur_pred) = cur in
@@ -51,8 +51,20 @@ let stmt_to_basic_block (stmts : Mir.stmt list) : t list =
               all_blocks := (cur_stmts @ [stmt1], lab :: cur_succ, cur_pred) :: !all_blocks;
               logic rest ([], [], [])
           )
+      | MakeLabel (lab) when (List.length cur_stmts <> 0) ->
+        let closed_stmt_list = 
+          cur_stmts @
+          [Mir.Goto (lab, None)]
+        in
+        all_blocks := (closed_stmt_list, lab :: cur_succ, cur_pred) :: !all_blocks;
+        logic stmts ([], [], [])
+      | Return _ -> all_blocks := (cur_stmts @ [stmt1], cur_succ, cur_pred) :: !all_blocks
       | _ -> logic rest (cur_stmts @ [stmt1], cur_succ, cur_pred)
       )
   in
   logic stmts ([], [], []);
-  !all_blocks
+  List.rev !all_blocks
+
+let convert (prog : Mir.stmt list list) = 
+  List.map (stmts_to_basic_block) prog |>
+  List.flatten 

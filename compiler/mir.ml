@@ -9,6 +9,7 @@ type value =
 
 type expr = 
   | Operation of value * Ast.ast_binop * value
+  | Not of value
   | Value of value
 
 

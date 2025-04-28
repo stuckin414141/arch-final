@@ -102,13 +102,18 @@ let rec stat_to_mir
     let end_label = 
       Labels.named_label (while_num ^ "WhileEnd")
     in
+    let body_label = 
+      Labels.named_label (while_num ^ "WhileBody")
+    in
     let stmt_insts, _ = 
       stat_to_mir must_be_aligned word_size (Some end_label) cond_renamings stmt 
     in
     (Mir.(
       MakeLabel begin_label ::
       cond_insts @
-      [Goto (end_label, Some (Value cond_val))] @
+      [Goto (body_label, Some (Value cond_val));
+      Goto (end_label, None);
+      MakeLabel (body_label)] @
       stmt_insts @
       [ Goto (begin_label, None);
       MakeLabel end_label]
@@ -117,7 +122,7 @@ let rec stat_to_mir
     let (init_insts, init_val, _) = 
       if is_expr_ftmlk init_expr then
         let func_addr = 
-          ftmlk_to_mir must_be_aligned word_size init_expr (Some var_name) is_recursive
+          ftmlk_to_mir must_be_aligned word_size renamings init_expr (Some var_name) is_recursive
         in
           [], func_addr, renamings
       else
@@ -249,8 +254,6 @@ and expr_to_mir
         | (field_name, expr, typ) :: rest -> 
           let (expr_insts, expr_val, _) = reg_etm renamings expr in
           let field_offset = lookup field_name offsets in
-          print_endline ("Offset " ^ string_of_int field_offset ^ 
-          " for " ^ field_name);
           let field_addr = 
             Mir.Operation (Lval (Temp res), Plus, Const field_offset) 
           in
@@ -299,7 +302,7 @@ and expr_to_mir
       if is_expr_ftmlk init_expr then
         [], 
          
-          (ftmlk_to_mir must_be_aligned word_size init_expr (Some var_name) is_recursive),
+          (ftmlk_to_mir must_be_aligned word_size renamings init_expr (Some var_name) is_recursive),
         renamings
       else
         reg_etm renamings init_expr
@@ -327,7 +330,7 @@ and expr_to_mir
     stmt_insts @ expr_insts, expr_val, renamings
   | Ftmlk _ ->
     let func_addr = 
-      ftmlk_to_mir must_be_aligned word_size ast None false
+      ftmlk_to_mir must_be_aligned word_size renamings ast None false
     in
     ([], func_addr, renamings)
   | FtmlkApp (func, args) ->
@@ -349,6 +352,7 @@ and expr_to_mir
 and ftmlk_to_mir 
   (must_be_aligned : bool) 
   (word_size : int) 
+  (renamings : Renamings.t)
   (ftmlk_expr : Ast.expr)
   (func_name : string option)
   (is_recursive : bool) =
@@ -369,11 +373,11 @@ and ftmlk_to_mir
   func_counter := !func_counter + 1;
   let func_label = Labels.named_label (
     match func_name with
-    | Some func_name -> func_num ^ func_name
+    | Some func_name -> func_num ^ "func_" ^ func_name
     | None -> func_num ^ "F") in
   let (arg_insts, func_renamings) = 
     let (arg_insts, arg_renamings) = 
-      List.fold_left process_args ([], Renamings.empty) args
+      List.fold_left process_args ([], renamings) args
     in
     if is_recursive then
       let (func_name, func_renamings) =
@@ -405,4 +409,4 @@ let lower (must_be_aligned : bool) (word_size : int)
   (ast : Ast.stmt) : Mir.stmt list list = 
   let (main, _) = stat_to_mir must_be_aligned word_size None
   Renamings.empty ast in
-  (Mir.MakeLabel (Labels.named_label "main") :: main) :: !all_mir
+  ((Mir.MakeLabel (Labels.named_label "main") :: main @ [Mir.Return (Const 0)]) :: !all_mir)

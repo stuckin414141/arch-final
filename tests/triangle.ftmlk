@@ -3,14 +3,14 @@ type point = {x: int; y: int};
 type triangle = {first : point; second : point; third : point};
 
 let origin : point = {x = 0; y = 0};
-let A : point = {x = 0; y = 1};
-let B : point = {x = 1; y = 0};
+let A : point = {x = 10; y = 3};
+let B : point = {x = 7; y = 9};
 let unit_triangle : triangle = 
     {first = origin; second = A; third = B};
 
 let area : triangle -> int = 
     ftmlk (t : triangle) {
-        t.first.x + t.second.y
+        t.second.x + t.third.y
     };
 
 print(area(unit_triangle))

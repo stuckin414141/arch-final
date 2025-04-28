@@ -1,0 +1,16 @@
+let rec collatz : int -> int -> int = 
+    ftmlk (cur : int, counter : int) {
+        if cur == 1 then 
+            counter
+        else
+            let next : int =
+                if ((cur/2) * 2) == cur then
+                    cur / 2
+                else
+                    3 * cur + 1
+            in
+            print(counter);
+            print(cur);
+            collatz (next, counter + 1)
+    };
+print(collatz(10000, 0))

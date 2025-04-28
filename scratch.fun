@@ -1,7 +1,2 @@
-let i : int = 0;
-while i < 10 {
-    if i > 5 { 
-        break 
-    };
-    print(i)
-}
+let simple : int -> int -> int = ftmlk (x: int, y : int) { x + (y * 2) };
+print(simple(4, 10))

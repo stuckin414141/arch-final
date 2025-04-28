@@ -57,12 +57,15 @@ let compile filename debug =
     let mir = Compiler.Lower_mir.lower false 8 typed_ast in
     (if debug then 
         output "mir" (Compiler.Util.string_of_mir_list mir));
-    mir
+    let bb = Compiler.Basicblocks.convert mir in
+    (if debug then
+        output "bb" (Compiler.Util.string_of_basic_blocks bb));
+    Compiler.Interp.interpreter bb
 
 let lex_cmd = 
     Command.basic
         ~summary:"Generate stream of tokens"
         (Command.Param.map filename_param ~f: 
-        (fun filename () -> let _ = compile filename true in ()))
+        (fun filename () -> compile filename true ))
 
 let () = Command_unix.run lex_cmd
