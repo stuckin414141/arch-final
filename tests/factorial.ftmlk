@@ -5,4 +5,4 @@ let rec fac : int -> int = ftmlk (n : int) {
         n * fac(n-1)
 };
 
-print(fac(6))
+print(fac(4))

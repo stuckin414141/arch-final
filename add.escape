@@ -1,0 +1,136 @@
+Seq
+  Seq
+    Seq
+      Seq
+        Seq
+          Seq
+            Seq
+              Seq
+                LetStmt add_two_numbers0
+                  type: (int)->((int)->(int))
+                  Expr
+                    Ftmlk
+                    Requires env: false
+                      Args
+                        x0 : int
+                          Ref: true
+                      Body
+                        Ftmlk
+                        Requires env: true
+                          Args
+                            y0 : int
+                              Ref: false
+                          Body
+                            BinOp +
+                              Left
+                                Var x0
+                              Right
+                                Var y0
+                              Type: int
+                  Is closure: false
+                  Is recursive: false
+                LetStmt add_three_numbers0
+                  type: (int)->((int)->((int)->(int)))
+                  Expr
+                    Ftmlk
+                    Requires env: false
+                      Args
+                        x0 : int
+                          Ref: true
+                      Body
+                        Ftmlk
+                        Requires env: true
+                          Args
+                            z0 : int
+                              Ref: true
+                          Body
+                            Ftmlk
+                            Requires env: true
+                              Args
+                                y0 : int
+                                  Ref: false
+                              Body
+                                BinOp +
+                                  Left
+                                    BinOp +
+                                      Left
+                                        Var x0
+                                      Right
+                                        Var y0
+                                      Type: int
+                                  Right
+                                    Var z0
+                                  Type: int
+                  Is closure: false
+                  Is recursive: false
+              Print
+                FtmlkApp
+                Type: int
+                  Func
+                    FtmlkApp
+                    Type: (int)->(int)
+                      Func
+                        Var add_two_numbers0
+                      Args
+                        Num 9
+                  Args
+                    Num 5
+            LetStmt add_leet0
+              type: (int)->(int)
+              Expr
+                FtmlkApp
+                Type: (int)->(int)
+                  Func
+                    Var add_two_numbers0
+                  Args
+                    Num 1337
+              Is closure: false
+              Is recursive: false
+          Print
+            FtmlkApp
+            Type: int
+              Func
+                Var add_leet0
+              Args
+                Num 100
+        LetStmt add_three0
+          type: (int)->(int)
+          Expr
+            FtmlkApp
+            Type: (int)->(int)
+              Func
+                Var add_two_numbers0
+              Args
+                Num 3
+          Is closure: false
+          Is recursive: false
+      Print
+        FtmlkApp
+        Type: int
+          Func
+            Var add_three0
+          Args
+            Num 140
+    LetStmt adc0
+      type: (int)->((int)->(int))
+      Expr
+        FtmlkApp
+        Type: (int)->((int)->(int))
+          Func
+            Var add_three_numbers0
+          Args
+            Num 1
+      Is closure: false
+      Is recursive: false
+  Print
+    FtmlkApp
+    Type: int
+      Func
+        FtmlkApp
+        Type: (int)->(int)
+          Func
+            Var adc0
+          Args
+            Num 8
+      Args
+        Num 9

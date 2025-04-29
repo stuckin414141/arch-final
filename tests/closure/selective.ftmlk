@@ -17,4 +17,6 @@ let hey_now : int -> int =
             }
         in
         h(x)
-    }
+    };
+
+print(hey_now(9)) //this should print 27, fyi

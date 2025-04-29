@@ -413,7 +413,7 @@ let rec create_env_arg (depths : depths) (depth : int)
         var_name,
         typ,
         create_env_arg depths depth cur_sl init_expr |> fst,
-        create_env_arg depths depth cur_sl init_expr|> fst,
+        create_env_arg depths depth cur_sl body_expr |> fst,
         is_closure,
         is_rec
       ), depths
