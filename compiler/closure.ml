@@ -42,7 +42,7 @@ module Escape = struct
 * 2] which variables can't be stored in registers
 *)
 
-type escape_table = (int * bool ref) Symbols.SymbolTable.t
+type escape_table = (int * bool ref * bool) Symbols.SymbolTable.t
 
 module Depths = Set.Make(Int)
   let rec analysis_stmt (venv : escape_table) depth = function
@@ -56,9 +56,15 @@ module Depths = Set.Make(Int)
           analysis_stmt venv_after_first depth rest 
         in
         venv_after_second, (Depths.union first_req second_req)
-    | Ast.LetStmt (name, _, expr, ref, _) ->
-        let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
-        analysis_expr venv_with_decl depth expr
+    | Ast.LetStmt (name, typ, expr, ref, _) ->
+        let is_func = 
+          (match typ with 
+          | Ftmlk (_, _) -> true
+          | _ -> false)
+        in
+        let venv_with_decl = Symbols.SymbolTable.add name (depth, ref, is_func) venv in
+        let _, req = analysis_expr venv_with_decl depth expr in
+        Symbols.SymbolTable.add name (depth, ref, false) venv, req
     | Ast.Print expr ->
         let _, req_env = analysis_expr venv depth expr in
         venv, req_env
@@ -76,8 +82,8 @@ module Depths = Set.Make(Int)
      analysis_expr (venv : escape_table) depth = function
       | Ast.Var name ->
           (match Symbols.SymbolTable.find_opt name venv with
-          | Some (d, ref) ->
-              if d < depth then
+          | Some (d, ref, is_func) ->
+              if d < depth && (not is_func) then
                 (ref := true;
                 venv, (Depths.empty |> Depths.add d))
               else
@@ -90,14 +96,21 @@ module Depths = Set.Make(Int)
           let _, then_req = analysis_expr updated_venv depth then_branch in
           let _, else_req = analysis_expr updated_venv depth else_branch in
           venv, (Depths.union cond_req then_req |> Depths.union else_req)
-      | Ast.Let (name, _, expr, body, ref, is_recursive) ->
-          let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
+      | Ast.Let (name, typ, expr, body, ref, is_recursive) ->
+          let is_func = 
+            (match typ with 
+              | Ftmlk (_, _) -> true 
+              | _ -> false)
+          in
+          let venv_with_decl = Symbols.SymbolTable.add name (depth, ref, is_func) venv in
           let _, init_req = 
             if is_recursive then
               analysis_expr venv_with_decl depth expr 
             else
               analysis_expr venv depth expr
           in
+          (*It is impossible for recursive calls to be made in the body.*)
+          let venv_with_decl = Symbols.SymbolTable.add name (depth, ref, false) venv in
           let _, body_req = analysis_expr venv_with_decl depth body in 
           venv, (Depths.union init_req body_req)
       | Ast.BinOp (left, _, right, _) ->
@@ -110,7 +123,7 @@ module Depths = Set.Make(Int)
           venv, (Depths.union stmt_req expr_req)
       | Ast.Ftmlk (args, body, req) ->
         let func_venv = List.fold_left (fun venv (name, _, ref) ->
-          Symbols.SymbolTable.add name (depth + 1, ref) venv) venv args in
+          Symbols.SymbolTable.add name (depth + 1, ref, false) venv) venv args in
         let _, func_req = analysis_expr func_venv (depth + 1) body in
         if Depths.is_empty func_req then 
           (req := false;
@@ -261,19 +274,15 @@ let get_prev_sl_type (sl : Types.t) =
   | _ -> failwith "Not a static link"
 
 let expr_of_outer_var (var_name : string) (distance : int) (cur_sl_type : Types.t) =
-  if distance = 0 then 
-    Ast.MemberOf(Var "0sl", var_name, cur_sl_type)
-  else
-  let rec walk_sl (steps : int) (sl_type : Types.t) = 
-    if steps = 0 then 
-      Ast.Var "0env"
+  let rec walk (cur : Ast.expr) (steps : int) (sl_type : Types.t) = 
+    if steps = 0 then
+      Ast.MemberOf(cur, var_name, sl_type)
     else
       let prev_sl_type = get_prev_sl_type sl_type in
-      Ast.MemberOf(walk_sl (steps -1) prev_sl_type, "0prev", prev_sl_type)
+      let next_expr = Ast.MemberOf(cur, "0prev", sl_type) in
+      walk next_expr (steps - 1) prev_sl_type
   in
-  let cur_env_type = get_prev_sl_type cur_sl_type in
-  Ast.MemberOf (walk_sl (distance - 1) cur_env_type, var_name, cur_env_type)
-
+    walk (Var "0sl") distance cur_sl_type
 (* Observe that we only need to do re-writes for variables that are closure/capture
 * Therefore, regardless, we will check of a let/letstmt/assign is done on a variable
 * in depths. If so, then it will be converted into a record assignment/dereference.

@@ -63,7 +63,7 @@ let compile filename debug =
     (if debug then 
         output "closure" (Compiler.Util.string_of_ast closure_ast)
       );
-    let mir = Compiler.Lower_mir.lower false 8 escape_ast in
+    let mir = Compiler.Lower_mir.lower false 8 closure_ast in
     (if debug then 
         output "mir" (Compiler.Util.string_of_mir_list mir));
     let bb = Compiler.Basicblocks.convert mir in

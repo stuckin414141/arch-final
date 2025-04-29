@@ -1,0 +1,23 @@
+let add_two_numbers : int -> int -> int = 
+    ftmlk (x : int) {
+        ftmlk (y : int) {
+            x + y
+        }
+    };
+
+let add_three_numbers : int -> int -> int -> int = 
+    ftmlk (x : int) {
+        ftmlk (z : int) {
+            ftmlk (y : int) {
+                x + y + z
+            }
+        }
+    };
+
+print(add_two_numbers(9) (5));
+let add_leet : int -> int = add_two_numbers (1337);
+print(add_leet(100));
+let add_three : int -> int = add_two_numbers (3);
+print(add_three(140));
+let adc : int -> int -> int = add_three_numbers (1);
+print(adc (8) (9));
