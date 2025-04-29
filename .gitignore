@@ -3,3 +3,6 @@ _build/*
 *.ua
 *.ast
 *.mir
+*.bb
+*.cc
+*.alpha
