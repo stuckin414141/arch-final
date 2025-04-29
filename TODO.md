@@ -1,7 +1,9 @@
 
 ## Things to do
 
-- test alpha-renaming
+- refactor the environment renaming/closure conversion scheme
+    - make sure recursion + function application works correctly
+    - you might have to pass it through another layer of alpha renaming fyi
 - you currently don't have support for negative integers.
     - add support for two's complement
 add separate closure-rewrites to the AST (after type-checking)

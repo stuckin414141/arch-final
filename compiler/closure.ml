@@ -253,17 +253,82 @@ The general algorithm:
     that gets OR'ed
 *)
 
-type depths = int Symbols.SymbolTable.t
+let get_prev_sl_type (sl : Types.t) = 
+  match sl with
+  | Record fields ->
+    List.filter (fun (field_name, typ) -> field_name = "0prev") fields |>
+    List.hd |> snd
+  | _ -> failwith "Not a static link"
 
-let rec create_env_arg (ast : Ast.expr) (cur_sl : Types.t option) : 
-  Ast.expr =
+let expr_of_outer_var (var_name : string) (distance : int) (cur_sl_type : Types.t) =
+  if distance = 0 then 
+    Ast.MemberOf(Var "0sl", var_name, cur_sl_type)
+  else
+  let rec walk_sl (steps : int) (sl_type : Types.t) = 
+    if steps = 0 then 
+      Ast.Var "0env"
+    else
+      let prev_sl_type = get_prev_sl_type sl_type in
+      Ast.MemberOf(walk_sl (steps -1) prev_sl_type, "0prev", prev_sl_type)
+  in
+  let cur_env_type = get_prev_sl_type cur_sl_type in
+  Ast.MemberOf (walk_sl (distance - 1) cur_env_type, var_name, cur_env_type)
+
+(* Observe that we only need to do re-writes for variables that are closure/capture
+* Therefore, regardless, we will check of a let/letstmt/assign is done on a variable
+* in depths. If so, then it will be converted into a record assignment/dereference.
+* the previous alpha-equivalence pass ensures that this works with let... in... expr
+*)
+(*Two boolean options are to handle recursive calls - first indicates
+if it's a function, second indicates if it needs an environment*)
+type depths = (int * bool * bool) Symbols.SymbolTable.t
+
+let create_closure (func : Ast.expr) (env : Ast.expr) = 
+  Ast.BinOp(
+    Ast.RecordExp(
+      ["code", func, Int;
+      "env", env, Int]
+    ), Binops.BOr,
+    Ast.Num (0x1000 lsl 48),
+    Types.Int
+  )
+let rec create_env_arg (depths : depths) (depth : int)
+  (cur_sl : Types.t option) (ast : Ast.expr) : 
+  Ast.expr * depths =
+  let cea_ignore_depth ast =
+    create_env_arg depths depth cur_sl ast |> fst
+  in
   match ast with
   | Ftmlk (args, body, req_env) ->
+    (*TODO: write closure args to closure*)
+    let process_arg depths (arg_name, _, is_closure) = 
+      if !is_closure then 
+        Symbols.SymbolTable.add arg_name (depth + 1, false, false) depths
+      else
+        depths 
+    in
+    let func_depths = List.fold_left process_arg depths args in
     let sl_type, sl_expr, should_have_sl = 
       get_sl_type_exp args body cur_sl 
     in
     if (should_have_sl) || !req_env then
-      let updated_body = create_env_arg body (Some (Types.Record sl_type)) in
+      let arg_to_closure (stmts : Ast.stmt) ((arg_name, arg_typ, is_closure)) =
+        if !is_closure then 
+          Ast.Seq(stmts, 
+          Assign(
+            MemberOf(Var "0sl", arg_name, Record sl_type),
+            Var arg_name,
+            arg_typ)
+          )
+        else
+          stmts
+      in
+      let move_arg_to_closure = List.fold_left (arg_to_closure) Ast.Nothing args in
+      let updated_body = 
+        create_env_arg func_depths (depth + 1) (Some (Types.Record sl_type)) body
+        |> fst
+      in
+      let updated_body = Ast.ESeq(move_arg_to_closure, updated_body) in
       let updated_args, _ = 
         (match cur_sl with 
         | Some typ -> ("0env", typ, ref false) :: args, true
@@ -276,88 +341,177 @@ let rec create_env_arg (ast : Ast.expr) (cur_sl : Types.t option) :
           req_env
         )
       in
-        hoisted_func
+      if !req_env then 
+        create_closure hoisted_func (Var "0sl"), depths
+      else
+        hoisted_func, depths
     else
       Ftmlk (
         args,
-        create_env_arg body None,
+        (*If it doesn't need an environment then it shouldn't have to access outer variables.
+        Therefore we don't pass the deps*)
+        create_env_arg depths (depth+1) None body |> fst,
         req_env
-      )
+      ), depths
   | MemberOf (expr, field_name, typ) ->
-    MemberOf (create_env_arg expr cur_sl, field_name, typ)
+    MemberOf (cea_ignore_depth expr, field_name, typ), depths
   | RecordExp fields ->
     RecordExp (List.map (fun (name, expr, typ) -> 
-      (name, create_env_arg expr cur_sl, typ)) fields)
+      (name, cea_ignore_depth expr, typ)) fields), depths
   | If (cond_exp, then_exp, else_exp, typ) ->
-    If(create_env_arg cond_exp cur_sl,
-      create_env_arg then_exp cur_sl,
-      create_env_arg else_exp cur_sl,
-      typ)
+    let (cond_ast, cond_depths) = create_env_arg depths depth cur_sl cond_exp in
+    If(cond_ast,
+      create_env_arg cond_depths depth cur_sl then_exp |> fst,
+      create_env_arg cond_depths depth cur_sl else_exp |> fst,
+      typ), depths
   | Let (var_name, typ, init_expr, body_expr, is_closure, is_rec) ->
-    Let (
-      var_name,
-      typ,
-      create_env_arg init_expr cur_sl,
-      create_env_arg body_expr cur_sl,
-      is_closure,
-      is_rec
-    )
-  | BinOp (left, op, right, typ) ->
-    BinOp (
-      create_env_arg left cur_sl,
-      op,
-      create_env_arg right cur_sl,
-      typ
-    )
-  | ESeq (stmt, expr) ->
-    ESeq (
-      create_env_arg_stmt cur_sl stmt,
-      create_env_arg expr cur_sl
-    )
-  | FtmlkApp (func, args) ->
-    FtmlkApp (
-      create_env_arg func cur_sl,
-      List.map (fun e -> create_env_arg e cur_sl) args
-    )
-  | Var _ | Num _ | Nullptr | Bool _ -> ast
-  and create_env_arg_stmt cur_sl (ast : Ast.stmt) = 
-    let ceas = create_env_arg_stmt cur_sl in
-    let cea = create_env_arg in
-    match ast with
-    | While (cond, stmt) ->
-      While (cea cond cur_sl, ceas stmt)
-    | LetStmt (var_name, typ, init_expr, is_closure, is_rec) ->
-      LetStmt(
+    if !is_closure then 
+      let is_func_type = (match typ with
+      | Ftmlk (_,_) -> true
+      | _ -> false)
+      in
+      let updated_depths = 
+        Symbols.SymbolTable.add var_name (depth, is_func_type, false) depths
+      in
+      let updated_init_expr,_ = 
+        if is_rec then 
+          create_env_arg updated_depths depth cur_sl init_expr
+        else
+          create_env_arg depths depth cur_sl init_expr
+      in
+      let updated_body_expr, _ = 
+        create_env_arg updated_depths depth cur_sl body_expr
+      in
+      let cur_sl_type = (
+        match cur_sl with 
+        | Some typ -> typ
+        | None -> failwith ("missing static link, couldn't store " ^ var_name)
+      )
+      in
+      ESeq(
+        Assign(
+          MemberOf(Var "0sl", var_name, cur_sl_type),
+          updated_init_expr,
+          typ
+        ),
+        updated_body_expr
+      ), depths
+    else
+      (*Note: we do not need to add the newly-declared/defined variable
+      into depths since we have a guarantee that the nested function
+      wont' try accessing it*)
+      Let (
         var_name,
         typ,
-        cea init_expr cur_sl,
+        create_env_arg depths depth cur_sl init_expr |> fst,
+        create_env_arg depths depth cur_sl init_expr|> fst,
         is_closure,
         is_rec
-      )
+      ), depths
+  | BinOp (left, op, right, typ) ->
+    BinOp (
+      cea_ignore_depth left,
+      op,
+      cea_ignore_depth right,
+      typ
+    ), depths
+  | ESeq (stmt, expr) ->
+    let (stmt_ast, stmt_depths) = create_env_arg_stmt depths depth cur_sl stmt in
+    ESeq (
+      stmt_ast,
+      create_env_arg stmt_depths depth cur_sl expr |> fst
+    ), depths
+  | FtmlkApp (func, args) ->
+    FtmlkApp (
+      cea_ignore_depth func,
+      List.map (fun e -> cea_ignore_depth e) args
+    ), depths
+  | Var var_name ->
+    (match Symbols.SymbolTable.find_opt var_name depths with
+    | Some (desired, is_func, _) ->
+      let sl_type = 
+        (match cur_sl with
+        | Some typ -> typ
+        | None -> failwith "Error: static link not found")
+      in
+      if is_func then 
+        (Var var_name)
+      else
+        (expr_of_outer_var var_name (depth - desired) sl_type)
+    | None -> (Var var_name)
+      ), depths
+  | Num _ | Nullptr | Bool _ -> ast, depths
+  and create_env_arg_stmt (depths : depths) (depth : int) cur_sl (ast : Ast.stmt) = 
+    let ceas = create_env_arg_stmt depths depth cur_sl in
+    let cea = create_env_arg depths depth cur_sl in
+    match ast with
+    | While (cond, stmt) ->
+      let cond_ast, cond_depths = create_env_arg depths depth cur_sl cond in
+      While (cond_ast,
+      create_env_arg_stmt cond_depths depth cur_sl stmt |> fst),
+      depths
+    | LetStmt (var_name, typ, init_expr, is_closure, is_rec) ->
+      if not !is_closure then
+        LetStmt(
+          var_name,
+          typ,
+          cea init_expr |> fst,
+          is_closure,
+          is_rec
+        ), depths
+      else
+        let is_func_type = 
+        (match typ with
+        | Ftmlk (_,_) -> true
+        | _ -> false)
+        in
+        let updated_depths = 
+          Symbols.SymbolTable.add var_name (depth, is_func_type, false) depths
+        in
+        let updated_init_expr,_ = 
+          if is_rec then 
+            create_env_arg updated_depths depth cur_sl init_expr
+          else
+            create_env_arg depths depth cur_sl init_expr
+        in
+        let cur_sl_type = (
+          match cur_sl with 
+          | Some typ -> typ
+          | None -> failwith ("missing static link, couldn't store " ^ var_name)
+        )
+        in
+          Assign(
+            MemberOf(Var "0sl", var_name, cur_sl_type),
+            updated_init_expr,
+            typ
+          ), updated_depths
     | Print (expr) ->
-      Print (cea expr cur_sl)
+      Print (cea expr |> fst), depths
     | Assign (target, src, typ) ->
       Assign (
-        cea target cur_sl,
-        cea src cur_sl,
+        cea target |> fst,
+        cea src |> fst,
         typ
-      )
+      ), depths
     | IfUnit (cond, stmt) ->
+      let cond_ast,cond_depths = create_env_arg depths depth cur_sl cond in
       IfUnit (
-        cea cond cur_sl,
-        ceas stmt
-      )
+        cond_ast,
+        create_env_arg_stmt cond_depths depth cur_sl stmt |> fst
+      ), depths
     | Seq (stmt1, stmt2) ->
+      let stmt1_ast, stmt1_depths = create_env_arg_stmt depths depth cur_sl stmt1 in
+      let stmt2_ast, stmt2_depths = create_env_arg_stmt stmt1_depths depth cur_sl stmt2 in
       Seq (
-        ceas stmt1,
-        ceas stmt2
-      )
-    | Break | Nothing -> ast
+        stmt1_ast,
+        stmt2_ast
+      ), stmt2_depths
+    | Break | Nothing -> ast,depths
 
 let create_env (ast : Ast.stmt) = 
   (*Since the global is a function, we will also have to analyze main*)
   let main_sl_type, main_sl_expr, main_sl_maybe = 
-    get_sl_type_exp [] (Ast.ESeq (ast, Nullptr)) None 
+    get_sl_type_exp [] (Ast.ESeq (ast, Num 0)) None 
   in
   if main_sl_maybe then
     Ast.Seq(Ast.LetStmt ("0sl", Record main_sl_type, RecordExp main_sl_expr, 
