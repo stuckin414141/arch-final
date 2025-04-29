@@ -6,3 +6,4 @@ _build/*
 *.bb
 *.cc
 *.alpha
+*.closure

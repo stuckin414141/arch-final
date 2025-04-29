@@ -343,16 +343,17 @@ and string_of_ast_expr depth = function
       String.concat "" args_strs ^
       indentation ^ "  Body\n" ^
       string_of_ast_expr (depth + 4) body
-  | Ast.FtmlkApp (func, args) ->
+  | Ast.FtmlkApp (func, args, typ) ->
       let indentation = indent_str depth in
       let args_strs = List.map (fun arg ->
         string_of_ast_expr (depth + 4) arg
       ) args in
       indentation ^ "FtmlkApp\n" ^
+      indentation ^ "Type: " ^ string_of_type typ ^ "\n" ^
       indentation ^ "  Func\n" ^
       string_of_ast_expr (depth + 4) func ^
       indentation ^ "  Args\n" ^
-      String.concat "" args_strs
+      String.concat "" args_strs 
   | Ast.RecordExp fields ->
       let indentation = indent_str depth in
       let fields_strs = List.map (fun (name, expr, typ) ->

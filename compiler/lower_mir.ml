@@ -326,7 +326,7 @@ and expr_to_mir
       ftmlk_to_mir must_be_aligned word_size ast None false
     in
     ([], func_addr)
-  | FtmlkApp (func, args) ->
+  | FtmlkApp (func, args, _) ->
     let process_args (arg_insts, arg_vals) arg = 
       let (arg_inst, arg_val) = reg_etm arg in
       (arg_insts @ arg_inst, arg_vals @ [arg_val])

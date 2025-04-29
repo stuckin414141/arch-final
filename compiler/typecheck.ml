@@ -309,7 +309,8 @@ and typecheck_expr ast types =
     in
     let args_ast = List.map arg_ast args in
     let (_, func_type, func_ast) = typecheck_expr func types in
-    (types, List.fold_left check_outer_arg func_type args, Ast.FtmlkApp(func_ast, args_ast))
+    let typ = List.fold_left check_outer_arg func_type args in
+    (types, typ, Ast.FtmlkApp(func_ast, args_ast, typ))
   | ESeq (stmt, expr) ->
     let (types, stmt_type, stmt_ast) = typecheck_stmt stmt types in
     if stmt_type <> Types.Unit then

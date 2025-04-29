@@ -45,105 +45,105 @@ module Escape = struct
 type escape_table = (int * bool ref) Symbols.SymbolTable.t
 
 module Depths = Set.Make(Int)
-let rec analysis_stmt (venv : escape_table) depth = function
-  | Ast.While (cond, body) ->
-      let updated_venv, cond_req_env = analysis_expr venv depth cond in
-      let _, body_req_env = analysis_stmt updated_venv depth body in
-      venv, (Depths.union cond_req_env body_req_env)
-  | Ast.Seq (first, rest) ->
-      let venv_after_first, first_req = analysis_stmt venv depth first in
-      let venv_after_second, second_req = 
-        analysis_stmt venv_after_first depth rest 
-      in
-      venv_after_second, (Depths.union first_req second_req)
-  | Ast.LetStmt (name, _, expr, ref, _) ->
-      let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
-      analysis_expr venv_with_decl depth expr
-  | Ast.Print expr ->
-      let _, req_env = analysis_expr venv depth expr in
-      venv, req_env
-  | Ast.Assign (target, expr, _) ->
-    let _, target_req = analysis_expr venv depth target in
-    let _ , expr_req = analysis_expr venv depth expr in
-    venv, (Depths.union target_req expr_req)
-  | Ast.IfUnit (cond, body) ->
-      let updated_venv, cond_req = analysis_expr venv depth cond in
-      let _, body_req = analysis_stmt updated_venv depth body in 
-      venv, (Depths.union cond_req body_req)
-  | Ast.Nothing -> venv, Depths.empty
-  | Break -> venv, Depths.empty
-and 
-   analysis_expr (venv : escape_table) depth = function
-    | Ast.Var name ->
-        (match Symbols.SymbolTable.find_opt name venv with
-        | Some (d, ref) ->
-            if d < depth then
-              (ref := true;
-              venv, (Depths.empty |> Depths.add d))
-            else
-              venv, Depths.empty
-        | None -> venv, Depths.empty)
-    | Ast.Num _ -> venv, Depths.empty
-    | Ast.Nullptr -> venv, Depths.empty
-    | Ast.If (cond, then_branch, else_branch, _) ->
-        let updated_venv, cond_req = analysis_expr venv depth cond in
-        let _, then_req = analysis_expr updated_venv depth then_branch in
-        let _, else_req = analysis_expr updated_venv depth else_branch in
-        venv, (Depths.union cond_req then_req |> Depths.union else_req)
-    | Ast.Let (name, _, expr, body, ref, is_recursive) ->
+  let rec analysis_stmt (venv : escape_table) depth = function
+    | Ast.While (cond, body) ->
+        let updated_venv, cond_req_env = analysis_expr venv depth cond in
+        let _, body_req_env = analysis_stmt updated_venv depth body in
+        venv, (Depths.union cond_req_env body_req_env)
+    | Ast.Seq (first, rest) ->
+        let venv_after_first, first_req = analysis_stmt venv depth first in
+        let venv_after_second, second_req = 
+          analysis_stmt venv_after_first depth rest 
+        in
+        venv_after_second, (Depths.union first_req second_req)
+    | Ast.LetStmt (name, _, expr, ref, _) ->
         let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
-        let _, init_req = 
-          if is_recursive then
-            analysis_expr venv_with_decl depth expr 
-          else
-            analysis_expr venv depth expr
+        analysis_expr venv_with_decl depth expr
+    | Ast.Print expr ->
+        let _, req_env = analysis_expr venv depth expr in
+        venv, req_env
+    | Ast.Assign (target, expr, _) ->
+      let _, target_req = analysis_expr venv depth target in
+      let _ , expr_req = analysis_expr venv depth expr in
+      venv, (Depths.union target_req expr_req)
+    | Ast.IfUnit (cond, body) ->
+        let updated_venv, cond_req = analysis_expr venv depth cond in
+        let _, body_req = analysis_stmt updated_venv depth body in 
+        venv, (Depths.union cond_req body_req)
+    | Ast.Nothing -> venv, Depths.empty
+    | Break -> venv, Depths.empty
+    and 
+     analysis_expr (venv : escape_table) depth = function
+      | Ast.Var name ->
+          (match Symbols.SymbolTable.find_opt name venv with
+          | Some (d, ref) ->
+              if d < depth then
+                (ref := true;
+                venv, (Depths.empty |> Depths.add d))
+              else
+                venv, Depths.empty
+          | None -> venv, Depths.empty)
+      | Ast.Num _ -> venv, Depths.empty
+      | Ast.Nullptr -> venv, Depths.empty
+      | Ast.If (cond, then_branch, else_branch, _) ->
+          let updated_venv, cond_req = analysis_expr venv depth cond in
+          let _, then_req = analysis_expr updated_venv depth then_branch in
+          let _, else_req = analysis_expr updated_venv depth else_branch in
+          venv, (Depths.union cond_req then_req |> Depths.union else_req)
+      | Ast.Let (name, _, expr, body, ref, is_recursive) ->
+          let venv_with_decl = Symbols.SymbolTable.add name (depth, ref) venv in
+          let _, init_req = 
+            if is_recursive then
+              analysis_expr venv_with_decl depth expr 
+            else
+              analysis_expr venv depth expr
+          in
+          let _, body_req = analysis_expr venv_with_decl depth body in 
+          venv, (Depths.union init_req body_req)
+      | Ast.BinOp (left, _, right, _) ->
+          let _, left_req = analysis_expr venv depth left in
+          let _, right_req = analysis_expr venv depth right in
+          venv, (Depths.union left_req right_req)
+      | Ast.ESeq (stmt, expr) ->
+          let updated_venv, stmt_req = analysis_stmt venv depth stmt in
+          let _, expr_req = analysis_expr updated_venv depth expr in
+          venv, (Depths.union stmt_req expr_req)
+      | Ast.Ftmlk (args, body, req) ->
+        let func_venv = List.fold_left (fun venv (name, _, ref) ->
+          Symbols.SymbolTable.add name (depth + 1, ref) venv) venv args in
+        let _, func_req = analysis_expr func_venv (depth + 1) body in
+        if Depths.is_empty func_req then 
+          (req := false;
+          venv, func_req)
+        else
+          (req := true;
+          venv, (Depths.remove depth func_req))
+      | Ast.FtmlkApp (func, args, _) ->
+        let _, args_req = 
+          List.fold_left (fun (venv, cur) arg -> 
+            let (_, arg_req) = analysis_expr venv depth arg in
+            (venv, (Depths.union cur arg_req))) 
+          (venv, Depths.empty) args 
         in
-        let _, body_req = analysis_expr venv_with_decl depth body in 
-        venv, (Depths.union init_req body_req)
-    | Ast.BinOp (left, _, right, _) ->
-        let _, left_req = analysis_expr venv depth left in
-        let _, right_req = analysis_expr venv depth right in
-        venv, (Depths.union left_req right_req)
-    | Ast.ESeq (stmt, expr) ->
-        let updated_venv, stmt_req = analysis_stmt venv depth stmt in
-        let _, expr_req = analysis_expr updated_venv depth expr in
-        venv, (Depths.union stmt_req expr_req)
-    | Ast.Ftmlk (args, body, req) ->
-      let func_venv = List.fold_left (fun venv (name, _, ref) ->
-        Symbols.SymbolTable.add name (depth + 1, ref) venv) venv args in
-      let _, func_req = analysis_expr func_venv (depth + 1) body in
-      if Depths.is_empty func_req then 
-        (req := false;
-        venv, func_req)
-      else
-        (req := true;
-        venv, (Depths.remove depth func_req))
-    | Ast.FtmlkApp (func, args) ->
-      let _, args_req = 
-        List.fold_left (fun (venv, cur) arg -> 
-          let (_, arg_req) = analysis_expr venv depth arg in
-          (venv, (Depths.union cur arg_req))) 
-        (venv, Depths.empty) args 
-      in
-      let _, func_req= analysis_expr venv depth func in
-      venv, (Depths.union args_req func_req)
-    | Ast.Bool _ -> venv, Depths.empty
-    | Ast.RecordExp fields ->
-        let _, req = 
-          List.fold_left (fun (venv, 
-          field_expr_reqs) (_, expr, _) ->
-          let (_, field_req) = analysis_expr venv depth expr in 
-          (venv, Depths.union field_expr_reqs field_req)) 
-          (venv, Depths.empty) 
-          fields
-        in
-        venv, req
-    | Ast.MemberOf (expr, _, _) ->
-        let _, req = analysis_expr venv depth expr in
-        venv, req
-  let analyze ast = 
-      let _, _ = analysis_stmt Symbols.SymbolTable.empty 0 ast in
-      ast
+        let _, func_req= analysis_expr venv depth func in
+        venv, (Depths.union args_req func_req)
+      | Ast.Bool _ -> venv, Depths.empty
+      | Ast.RecordExp fields ->
+          let _, req = 
+            List.fold_left (fun (venv, 
+            field_expr_reqs) (_, expr, _) ->
+            let (_, field_req) = analysis_expr venv depth expr in 
+            (venv, Depths.union field_expr_reqs field_req)) 
+            (venv, Depths.empty) 
+            fields
+          in
+          venv, req
+      | Ast.MemberOf (expr, _, _) ->
+          let _, req = analysis_expr venv depth expr in
+          venv, req
+    let analyze ast = 
+        let _, _ = analysis_stmt Symbols.SymbolTable.empty 0 ast in
+        ast
 end
 
 let default_val (typ : Types.t) : Ast.expr =
@@ -189,7 +189,7 @@ let get_sl_fields (args : (string * Types.t * bool ref) list)
         (pe left) @ (pe right)
       | ESeq (stmt, expr) ->
         (process_stmt stmt) @ (pe expr)
-      | FtmlkApp (func, args) ->
+      | FtmlkApp (func, args, _) ->
         (pe func) @ 
         (List.fold_left (fun sl_fields arg -> sl_fields @ (pe arg))
           [] args)
@@ -256,7 +256,7 @@ The general algorithm:
 let get_prev_sl_type (sl : Types.t) = 
   match sl with
   | Record fields ->
-    List.filter (fun (field_name, typ) -> field_name = "0prev") fields |>
+    List.filter (fun (field_name, _) -> field_name = "0prev") fields |>
     List.hd |> snd
   | _ -> failwith "Not a static link"
 
@@ -289,7 +289,7 @@ let create_closure (func : Ast.expr) (env : Ast.expr) =
       ["code", func, Int;
       "env", env, Int]
     ), Binops.BOr,
-    Ast.Num (0x1000 lsl 48),
+    Ast.Num (0x100 lsl 44),
     Types.Int
   )
 let rec create_env_arg (depths : depths) (depth : int)
@@ -421,10 +421,47 @@ let rec create_env_arg (depths : depths) (depth : int)
       stmt_ast,
       create_env_arg stmt_depths depth cur_sl expr |> fst
     ), depths
-  | FtmlkApp (func, args) ->
-    FtmlkApp (
-      cea_ignore_depth func,
-      List.map (fun e -> cea_ignore_depth e) args
+  | FtmlkApp (func, args, typ) ->
+    let args_ast = List.map (fun e -> cea_ignore_depth e) args in
+    let func_ast = cea_ignore_depth func in
+    let is_func_normal = 
+      Ast.BinOp(
+        Ast.BinOp(
+          func_ast,
+          Binops.BAnd,
+          Num (0xfff lsl 44),
+          Int
+        ), 
+        Binops.Eq,
+        Num 0,
+        Bool
+      )
+    in
+    let call_closure = 
+      let closure_type = Types.Record [("code", Int); ("env", Int)] in
+      let clean_closure = 
+        Ast.BinOp(
+          func_ast,
+          Binops.BAnd,
+          Num (0xffffffffffff),
+          Int
+        )
+      in
+      let code = Ast.MemberOf(clean_closure, "code", closure_type) in
+      let env = Ast.MemberOf(clean_closure, "env", closure_type) in
+        Ast.FtmlkApp (
+          code,
+          env :: args_ast,
+          typ
+        )
+    in
+    Ast.(
+      If (
+        is_func_normal,
+        FtmlkApp (func_ast, args_ast, typ),
+        call_closure,
+        typ
+      )
     ), depths
   | Var var_name ->
     (match Symbols.SymbolTable.find_opt var_name depths with
@@ -442,7 +479,6 @@ let rec create_env_arg (depths : depths) (depth : int)
       ), depths
   | Num _ | Nullptr | Bool _ -> ast, depths
   and create_env_arg_stmt (depths : depths) (depth : int) cur_sl (ast : Ast.stmt) = 
-    let ceas = create_env_arg_stmt depths depth cur_sl in
     let cea = create_env_arg depths depth cur_sl in
     match ast with
     | While (cond, stmt) ->
@@ -516,6 +552,7 @@ let create_env (ast : Ast.stmt) =
   if main_sl_maybe then
     Ast.Seq(Ast.LetStmt ("0sl", Record main_sl_type, RecordExp main_sl_expr, 
   ref false, false),
-      create_env_arg_stmt (Some (Record main_sl_type)) ast)
+      create_env_arg_stmt (Symbols.SymbolTable.empty) 0 (Some (Record main_sl_type)) ast
+      |> fst)
   else
-    create_env_arg_stmt None ast
+    create_env_arg_stmt (Symbols.SymbolTable.empty) 0 None ast |> fst

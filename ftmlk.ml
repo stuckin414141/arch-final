@@ -59,9 +59,9 @@ let compile filename debug =
     let escape_ast = Compiler.Closure.Escape.analyze typed_ast in
     (if debug then
         output "escape" (Compiler.Util.string_of_ast escape_ast));
-    let env_ast = Compiler.Closure.create_env escape_ast in
+    let closure_ast = Compiler.Closure.create_env escape_ast in
     (if debug then 
-        output "cc" (Compiler.Util.string_of_ast env_ast)
+        output "closure" (Compiler.Util.string_of_ast closure_ast)
       );
     let mir = Compiler.Lower_mir.lower false 8 escape_ast in
     (if debug then 
