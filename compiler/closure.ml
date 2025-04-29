@@ -35,67 +35,6 @@ It therefore makes sense to perform closure-conversion in three passes:
   counter to ensure distinct names/arguments
 *)
 
-(* Given a function definition, returns a list of the fields required in the
-static link (excluding back pointer)*)
-let get_sl_fields (args : (string * Types.t * bool ref) list) 
-  (body : Ast.expr) : (string * Types.t) list = 
-  let closure_args = 
-    let is_arg_closure (_, _, is_closure) = !is_closure in
-    List.filter is_arg_closure args |>
-    List.map (fun (name, typ, _) -> (name, typ)) 
-  in
-    let rec process_expr (ast : Ast.expr) =
-      let pe = process_expr in 
-      match ast with
-      | Let (var_name, var_typ, init_expr, body_expr, is_closure, _) ->
-        let subexpr_sl_fields = 
-          (process_expr init_expr) @ (process_expr body_expr)
-        in
-        if !is_closure then
-          (var_name, var_typ) :: subexpr_sl_fields
-        else
-          subexpr_sl_fields
-      | If (cond_expr, then_expr, else_expr, _) ->
-        (pe cond_expr) @ (pe then_expr) @ (pe else_expr)
-      | Var _ -> []
-      | Num _ -> []
-      | Nullptr -> []
-      | Bool _ -> []
-      | RecordExp fields ->
-        List.fold_left (fun sl_fields (_, field_expr, _) -> 
-          sl_fields @ (pe field_expr)) [] fields
-      | BinOp (left, _, right, _) ->
-        (pe left) @ (pe right)
-      | ESeq (stmt, expr) ->
-        (process_stmt stmt) @ (pe expr)
-      | FtmlkApp (func, args) ->
-        (pe func) @ 
-        (List.fold_left (fun sl_fields arg -> sl_fields @ (pe arg))
-          [] args)
-      | Ast.Ftmlk (_, _, _) -> []
-      | Ast.MemberOf (record_expr, _, _) ->  
-        (process_expr record_expr)
-    and process_stmt (ast : Ast.stmt) = 
-      let pe = process_expr in
-      let ps = process_stmt in 
-      match ast with 
-      | LetStmt (var_name, var_typ, init_expr, is_closure, _) ->
-        let init_expr_sl = pe init_expr in
-        if !is_closure then
-          (var_name, var_typ) :: init_expr_sl
-        else 
-          init_expr_sl
-      | While (cond, body) ->
-        (pe cond) @ (ps body)
-      | Print (expr) -> pe expr
-      | Assign (target, src, _) -> (pe target) @ (pe src)
-      | IfUnit (cond, body) -> (pe cond) @ (ps body)
-      | Seq (stmt1, stmt2) -> (ps stmt1) @ (ps stmt2)
-      | Break -> []
-      | Nothing -> []
-    in
-  (process_expr body) @ closure_args
-
 module Escape = struct 
   (*
 * Perform escape analysis to 
@@ -206,9 +145,223 @@ and
       let _, _ = analysis_stmt Symbols.SymbolTable.empty 0 ast in
       ast
 end
+
+let default_val (typ : Types.t) : Ast.expr =
+  match typ with
+  | Bool -> Bool false
+  | Int -> Num 0 
+  | Nullptr -> Nullptr
+  | Ftmlk (_, _) -> Nullptr
+  | Record _ -> Nullptr
+  | Self -> Nullptr
+  | Unit -> failwith "unit indicates no value"
+
+(* Given a function definition, returns a list of the fields required in the
+static link (excluding back pointer)*)
+let get_sl_fields (args : (string * Types.t * bool ref) list) 
+  (body : Ast.expr) : (string * Types.t) list = 
+  let closure_args = 
+    let is_arg_closure (_, _, is_closure) = !is_closure in
+    List.filter is_arg_closure args |>
+    List.map (fun (name, typ, _) -> (name, typ)) 
+  in
+    let rec process_expr (ast : Ast.expr) =
+      let pe = process_expr in 
+      match ast with
+      | Let (var_name, var_typ, init_expr, body_expr, is_closure, _) ->
+        let subexpr_sl_fields = 
+          (process_expr init_expr) @ (process_expr body_expr)
+        in
+        if !is_closure then
+          (var_name, var_typ) :: subexpr_sl_fields
+        else
+          subexpr_sl_fields
+      | If (cond_expr, then_expr, else_expr, _) ->
+        (pe cond_expr) @ (pe then_expr) @ (pe else_expr)
+      | Var _ -> []
+      | Num _ -> []
+      | Nullptr -> []
+      | Bool _ -> []
+      | RecordExp fields ->
+        List.fold_left (fun sl_fields (_, field_expr, _) -> 
+          sl_fields @ (pe field_expr)) [] fields
+      | BinOp (left, _, right, _) ->
+        (pe left) @ (pe right)
+      | ESeq (stmt, expr) ->
+        (process_stmt stmt) @ (pe expr)
+      | FtmlkApp (func, args) ->
+        (pe func) @ 
+        (List.fold_left (fun sl_fields arg -> sl_fields @ (pe arg))
+          [] args)
+      | Ast.Ftmlk (_, _, _) -> []
+      | Ast.MemberOf (record_expr, _, _) ->  
+        (process_expr record_expr)
+    and process_stmt (ast : Ast.stmt) = 
+      let pe = process_expr in
+      let ps = process_stmt in 
+      match ast with 
+      | LetStmt (var_name, var_typ, init_expr, is_closure, _) ->
+        let init_expr_sl = pe init_expr in
+        if !is_closure then
+          (var_name, var_typ) :: init_expr_sl
+        else 
+          init_expr_sl
+      | While (cond, body) ->
+        (pe cond) @ (ps body)
+      | Print (expr) -> pe expr
+      | Assign (target, src, _) -> (pe target) @ (pe src)
+      | IfUnit (cond, body) -> (pe cond) @ (ps body)
+      | Seq (stmt1, stmt2) -> (ps stmt1) @ (ps stmt2)
+      | Break -> []
+      | Nothing -> []
+    in
+  (process_expr body) @ closure_args
+
+  (*wrapper to get the type of the static link + initializing expression
+  given the static link of the enclosing function*)
+  let get_sl_type_exp args body cur_sl = 
+    let temp_sl_fields = 
+      get_sl_fields args body
+    in
+    let temp_sl_record_exp = 
+        List.map (fun (field_name, typ) ->
+          (field_name, default_val typ, typ)) temp_sl_fields
+    in
+    let should_have_sl = List.length temp_sl_fields <> 0 in
+      (match cur_sl with
+      | Some cur_sl_typ ->
+        ("0prev", cur_sl_typ) :: temp_sl_fields,
+        ("0prev", Ast.Var ("0env"), cur_sl_typ) :: temp_sl_record_exp,
+        should_have_sl
+      | None -> temp_sl_fields, temp_sl_record_exp, should_have_sl)
+
 (*
 We now re-write every function that requires it to take in an environment
 argument and produce a static link.
 The static link record will be zero-initialized initially (int = 0, bool = false,
 ptr types = nullptr)
+The general algorithm:
+- upon processing an ftmlk expression, if it requires an environment, then 
+  we 
+  1] get the type of the static link (function + passed in parent static link type)
+  2] Use another function to re-write the body to refer to the static link instead
+    of the plain variable
+      - this does not actually require any knowledge of the static link
+        thanks to our naming scheme. The link is still required to fill
+        type information in the AST
+  3] Re-write the return value of the ftmlk expression to be a record
+    that gets OR'ed
 *)
+
+type depths = int Symbols.SymbolTable.t
+
+let rec create_env_arg (ast : Ast.expr) (cur_sl : Types.t option) : 
+  Ast.expr =
+  match ast with
+  | Ftmlk (args, body, req_env) ->
+    let sl_type, sl_expr, should_have_sl = 
+      get_sl_type_exp args body cur_sl 
+    in
+    if (should_have_sl) || !req_env then
+      let updated_body = create_env_arg body (Some (Types.Record sl_type)) in
+      let updated_args, _ = 
+        (match cur_sl with 
+        | Some typ -> ("0env", typ, ref false) :: args, true
+        | None -> args, false)
+      in
+      let hoisted_func = 
+        Ast.Ftmlk (
+          updated_args,
+          Let("0sl",Record sl_type, RecordExp sl_expr, updated_body, ref false, false),
+          req_env
+        )
+      in
+        hoisted_func
+    else
+      Ftmlk (
+        args,
+        create_env_arg body None,
+        req_env
+      )
+  | MemberOf (expr, field_name, typ) ->
+    MemberOf (create_env_arg expr cur_sl, field_name, typ)
+  | RecordExp fields ->
+    RecordExp (List.map (fun (name, expr, typ) -> 
+      (name, create_env_arg expr cur_sl, typ)) fields)
+  | If (cond_exp, then_exp, else_exp, typ) ->
+    If(create_env_arg cond_exp cur_sl,
+      create_env_arg then_exp cur_sl,
+      create_env_arg else_exp cur_sl,
+      typ)
+  | Let (var_name, typ, init_expr, body_expr, is_closure, is_rec) ->
+    Let (
+      var_name,
+      typ,
+      create_env_arg init_expr cur_sl,
+      create_env_arg body_expr cur_sl,
+      is_closure,
+      is_rec
+    )
+  | BinOp (left, op, right, typ) ->
+    BinOp (
+      create_env_arg left cur_sl,
+      op,
+      create_env_arg right cur_sl,
+      typ
+    )
+  | ESeq (stmt, expr) ->
+    ESeq (
+      create_env_arg_stmt cur_sl stmt,
+      create_env_arg expr cur_sl
+    )
+  | FtmlkApp (func, args) ->
+    FtmlkApp (
+      create_env_arg func cur_sl,
+      List.map (fun e -> create_env_arg e cur_sl) args
+    )
+  | Var _ | Num _ | Nullptr | Bool _ -> ast
+  and create_env_arg_stmt cur_sl (ast : Ast.stmt) = 
+    let ceas = create_env_arg_stmt cur_sl in
+    let cea = create_env_arg in
+    match ast with
+    | While (cond, stmt) ->
+      While (cea cond cur_sl, ceas stmt)
+    | LetStmt (var_name, typ, init_expr, is_closure, is_rec) ->
+      LetStmt(
+        var_name,
+        typ,
+        cea init_expr cur_sl,
+        is_closure,
+        is_rec
+      )
+    | Print (expr) ->
+      Print (cea expr cur_sl)
+    | Assign (target, src, typ) ->
+      Assign (
+        cea target cur_sl,
+        cea src cur_sl,
+        typ
+      )
+    | IfUnit (cond, stmt) ->
+      IfUnit (
+        cea cond cur_sl,
+        ceas stmt
+      )
+    | Seq (stmt1, stmt2) ->
+      Seq (
+        ceas stmt1,
+        ceas stmt2
+      )
+    | Break | Nothing -> ast
+
+let create_env (ast : Ast.stmt) = 
+  (*Since the global is a function, we will also have to analyze main*)
+  let main_sl_type, main_sl_expr, main_sl_maybe = 
+    get_sl_type_exp [] (Ast.ESeq (ast, Nullptr)) None 
+  in
+  if main_sl_maybe then
+    Ast.Seq(Ast.LetStmt ("0sl", Record main_sl_type, RecordExp main_sl_expr, 
+  ref false, false),
+      create_env_arg_stmt (Some (Record main_sl_type)) ast)
+  else
+    create_env_arg_stmt None ast

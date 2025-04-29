@@ -59,13 +59,17 @@ let compile filename debug =
     let escape_ast = Compiler.Closure.Escape.analyze typed_ast in
     (if debug then
         output "escape" (Compiler.Util.string_of_ast escape_ast));
+    let env_ast = Compiler.Closure.create_env escape_ast in
+    (if debug then 
+        output "env" (Compiler.Util.string_of_ast env_ast)
+      );
     let mir = Compiler.Lower_mir.lower false 8 escape_ast in
     (if debug then 
         output "mir" (Compiler.Util.string_of_mir_list mir));
     let bb = Compiler.Basicblocks.convert mir in
     (if debug then
         output "bb" (Compiler.Util.string_of_basic_blocks bb));
-    Compiler.Interp.interpreter bb
+    (*Compiler.Interp.interpreter bb*) ()
 
 let lex_cmd = 
     Command.basic
