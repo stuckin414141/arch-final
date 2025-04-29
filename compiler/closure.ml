@@ -232,7 +232,7 @@ let get_sl_fields (args : (string * Types.t * bool ref) list)
 
   (*wrapper to get the type of the static link + initializing expression
   given the static link of the enclosing function*)
-  let get_sl_type_exp args body cur_sl = 
+  let get_sl_type_exp args body cur_sl req_env = 
     let temp_sl_fields = 
       get_sl_fields args body
     in
@@ -243,9 +243,10 @@ let get_sl_fields (args : (string * Types.t * bool ref) list)
     let should_have_sl = List.length temp_sl_fields <> 0 in
       (match cur_sl with
       | Some cur_sl_typ ->
-        ("0prev", cur_sl_typ) :: temp_sl_fields,
-        ("0prev", Ast.Var ("0env"), cur_sl_typ) :: temp_sl_record_exp,
-        should_have_sl
+        if req_env then
+          ("0prev", cur_sl_typ) :: temp_sl_fields,
+          ("0prev", Ast.Var ("0env"), cur_sl_typ) :: temp_sl_record_exp, should_have_sl
+        else temp_sl_fields, temp_sl_record_exp, should_have_sl
       | None -> temp_sl_fields, temp_sl_record_exp, should_have_sl)
 
 (*
@@ -318,7 +319,7 @@ let rec create_env_arg (depths : depths) (depth : int)
     in
     let func_depths = List.fold_left process_arg depths args in
     let sl_type, sl_expr, should_have_sl = 
-      get_sl_type_exp args body cur_sl 
+      get_sl_type_exp args body cur_sl !req_env
     in
     if (should_have_sl) || !req_env then
       let arg_to_closure (stmts : Ast.stmt) ((arg_name, arg_typ, is_closure)) =
@@ -338,10 +339,14 @@ let rec create_env_arg (depths : depths) (depth : int)
         |> fst
       in
       let updated_body = Ast.ESeq(move_arg_to_closure, updated_body) in
-      let updated_args, _ = 
+      let updated_args = 
         (match cur_sl with 
-        | Some typ -> ("0env", typ, ref false) :: args, true
-        | None -> args, false)
+        | Some typ -> 
+          if !req_env then
+            ("0env", typ, ref false) :: args
+          else
+            args
+        | None -> args)
       in
       let hoisted_func = 
         Ast.Ftmlk (
@@ -556,7 +561,7 @@ let rec create_env_arg (depths : depths) (depth : int)
 let create_env (ast : Ast.stmt) = 
   (*Since the global is a function, we will also have to analyze main*)
   let main_sl_type, main_sl_expr, main_sl_maybe = 
-    get_sl_type_exp [] (Ast.ESeq (ast, Num 0)) None 
+    get_sl_type_exp [] (Ast.ESeq (ast, Num 0)) None false
   in
   if main_sl_maybe then
     Ast.Seq(Ast.LetStmt ("0sl", Record main_sl_type, RecordExp main_sl_expr, 

@@ -1,12 +1,12 @@
-let add_three_numbers : int -> int -> int -> int = 
-    ftmlk (x : int) {
-        ftmlk (z : int) {
-            ftmlk (y : int) {
-                x + y + z
-            }
-        }
-    };
-let adc : int -> int -> int = add_three_numbers (1);
-print(adc (8) (9));
-let add_leet_sixty : int -> int = add_three_numbers (1337) (60);
-print(add_leet_sixty(100));
+type Point = {x: int; y: int};
+
+let make_adder: (Point)->(int)->(int) = ftmlk(p: Point) {
+  // p should escape since its fields are accessed in the inner function
+  ftmlk(z: int) {
+    p.x + p.y + z
+  }
+};
+
+let point: Point = {x = 5; y = 10};
+let adder: (int)->(int) = make_adder(point);
+print(adder(15))  // Should output 30 (5 + 10 + 15)
