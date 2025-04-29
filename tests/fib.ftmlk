@@ -1,0 +1,19 @@
+type fib = {first : int; second : int; next : bool -> fib};
+
+let rec get_next_fib : int -> int -> bool -> fib = 
+    ftmlk(first : int, second : int) {
+        ftmlk(b : bool) {
+            {
+                first = second;
+                second = first + second;
+                next = get_next_fib(second, first + second)
+            }
+        }
+    };
+let cur : fib = {first = 1; second = 1; next = get_next_fib(1, 1)};
+let i : int = 0;
+while i < 30 {
+    print(cur.second);
+    cur := cur.next(true);
+    i := i + 1
+}
