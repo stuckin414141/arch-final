@@ -3,71 +3,156 @@ Seq
     Seq
       Seq
         Nothing
-        LetStmt make_adder0
-          type: ({x: int, y: int})->((int)->(int))
+        LetStmt constructor0
+          type: (int)->((int)->({inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}))
           Expr
             Ftmlk
             Requires env: false
               Args
-                p0 : {x: int, y: int}
+                price0 : int
+                  Ref: false
+                age0 : int
                   Ref: false
               Body
-                Ftmlk
-                Requires env: false
-                  Args
-                    z0 : int
-                      Ref: false
+                Let ret0
+                  Expr
+                    RecordExp
+                      Field inc_year
+                        Expr
+                          Ftmlk
+                          Requires env: false
+                            Args
+                              b0 : bool
+                                Ref: false
+                            Body
+                              Var b0
+                        Type: (bool)->(bool)
+                      Field price
+                        Expr
+                          Var price0
+                        Type: int
+                      Field year
+                        Expr
+                          BinOp -
+                            Left
+                              Num 2025
+                            Right
+                              Var age0
+                            Type: int
+                        Type: int
+                      Field age
+                        Expr
+                          Var age0
+                        Type: int
+                      Field broken
+                        Expr
+                          Bool false
+                        Type: bool
                   Body
-                    BinOp +
-                      Left
-                        BinOp +
-                          Left
-                            MemberOf 
+                    Let inc_year0
+                      Expr
+                        Ftmlk
+                        Requires env: false
+                          Args
+                            b0 : bool
+                              Ref: false
+                          Body
+                            ESeq
+                              Stmt
+                                Seq
+                                  Assign
+                                   Target
+                                      MemberOf 
+                                        Expr
+                                          Var ret0
+                                        Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+                                          Field: price
+                                    Expr
+                                      BinOp -
+                                        Left
+                                          MemberOf 
+                                            Expr
+                                              Var ret0
+                                            Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+                                              Field: price
+                                        Right
+                                          Num 1000
+                                        Type: int
+                                    Type: int
+                                  Assign
+                                   Target
+                                      MemberOf 
+                                        Expr
+                                          Var ret0
+                                        Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+                                          Field: age
+                                    Expr
+                                      BinOp +
+                                        Left
+                                          MemberOf 
+                                            Expr
+                                              Var ret0
+                                            Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+                                              Field: age
+                                        Right
+                                          Num 1
+                                        Type: int
+                                    Type: int
                               Expr
-                                Var p0
-                              Type: {x: int, y: int}
-                                Field: x
-                          Right
-                            MemberOf 
+                                Bool true
+                      Body
+                        ESeq
+                          Stmt
+                            Assign
+                             Target
+                                MemberOf 
+                                  Expr
+                                    Var ret0
+                                  Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+                                    Field: inc_year
                               Expr
-                                Var p0
-                              Type: {x: int, y: int}
-                                Field: y
-                          Type: int
-                      Right
-                        Var z0
-                      Type: int
+                                Var inc_year0
+                              Type: (bool)->(bool)
+                          Expr
+                            Var ret0
+                      Is closure: false
+                      Recursive: false
+                      Type: (bool)->(bool)
+                  Is closure: false
+                  Recursive: false
+                  Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
           Is closure: false
           Is recursive: false
-      LetStmt point0
-        type: {x: int, y: int}
+      LetStmt honda0
+        type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
         Expr
-          RecordExp
-            Field x
-              Expr
-                Num 5
-              Type: int
-            Field y
-              Expr
-                Num 10
-              Type: int
+          FtmlkApp
+          Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+            Func
+              Var constructor0
+            Args
+              Num 10000
+              Num 5
         Is closure: false
         Is recursive: false
-    LetStmt adder0
-      type: (int)->(int)
+    LetStmt z0
+      type: bool
       Expr
         FtmlkApp
-        Type: (int)->(int)
+        Type: bool
           Func
-            Var make_adder0
+            MemberOf 
+              Expr
+                Var honda0
+              Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+                Field: inc_year
           Args
-            Var point0
+            Bool true
       Is closure: false
       Is recursive: false
   Print
-    FtmlkApp
-    Type: int
-      Func
-        Var adder0
-      Args
-        Num 15
+    MemberOf 
+      Expr
+        Var honda0
+      Type: {inc_year: (bool)->(bool), price: int, year: int, age: int, broken: bool}
+        Field: price

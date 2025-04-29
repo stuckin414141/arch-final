@@ -1,12 +1,31 @@
-type Point = {x: int; y: int};
+// Closures + functions means that you can somewhat do OOP
 
-let make_adder: (Point)->(int)->(int) = ftmlk(p: Point) {
-  // p should escape since its fields are accessed in the inner function
-  ftmlk(z: int) {
-    p.x + p.y + z
-  }
-};
+type car = {
+    inc_year : bool -> bool;
+    price : int; year : int; age : int; broken : bool};
 
-let point: Point = {x = 5; y = 10};
-let adder: (int)->(int) = make_adder(point);
-print(adder(15))  // Should output 30 (5 + 10 + 15)
+
+
+let constructor : int -> int -> car =
+    ftmlk (price : int, age : int) {
+        let ret : car = {
+            inc_year = ftmlk(b : bool) {b};
+            price = price;
+            year = 2025 - age;
+            age = age;
+            broken = false
+        }
+        in
+        let inc_year : bool -> bool = 
+            ftmlk (b : bool) {
+                ret.price := ret.price - 1000;
+                ret.age := ret.age + 1;
+                true
+            }
+        in
+        ret.inc_year := inc_year;
+        ret
+    };
+let honda : car = constructor(10000, 5);
+let z : bool = honda.inc_year(true);
+print(honda.price)

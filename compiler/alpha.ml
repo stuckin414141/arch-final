@@ -11,7 +11,7 @@ module Renamings = struct
     | Some counter ->
       var_name ^ (string_of_int counter), renamings
     | _ -> (*should never happen*)
-      failwith "used variable before declaration"
+      failwith ("used variable " ^ var_name ^ " before declaration")
 
   (*Used when creating a variable for a new scope. Returns the 
   new name (used within scope), along with symbol table*)
